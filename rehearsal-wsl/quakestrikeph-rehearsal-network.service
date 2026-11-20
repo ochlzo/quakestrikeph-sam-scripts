@@ -1,0 +1,11 @@
+# AI-assisted rehearsal setup: keep both Docker engines' networking separate.
+[Unit]
+Description=Private network for the QuakeStrikePH offline rehearsal
+
+[Service]
+ExecStart=/usr/bin/sleep infinity
+ExecStartPost=/usr/bin/ln -sfn /proc/${MAINPID}/ns/net /run/quakestrikeph-rehearsal.netns
+PrivateNetwork=yes
+
+[Install]
+WantedBy=multi-user.target

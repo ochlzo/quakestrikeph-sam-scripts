@@ -1,0 +1,11 @@
+# AI-assisted adaptation of systemd-socket-proxyd's Namespace Example:
+# https://www.freedesktop.org/software/systemd/man/254/systemd-socket-proxyd.html
+[Unit]
+Description=Forward a local port into the rehearsal network
+BindsTo=quakestrikeph-rehearsal-network.service
+After=quakestrikeph-rehearsal-network.service
+JoinsNamespaceOf=quakestrikeph-rehearsal-network.service
+
+[Service]
+ExecStart=/usr/lib/systemd/systemd-socket-proxyd 127.0.0.1:%i
+PrivateNetwork=yes

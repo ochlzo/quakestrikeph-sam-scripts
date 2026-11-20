@@ -1,0 +1,7 @@
+# AI-assisted rehearsal-only host port; upstream container ports stay unchanged.
+[Socket]
+ListenStream=127.0.0.1:14321
+Service=quakestrikeph-rehearsal-proxy@4321.service
+
+[Install]
+WantedBy=sockets.target

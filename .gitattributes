@@ -1,0 +1,6 @@
+# Bash scripts must retain Linux line endings when checked out on Windows.
+*.sh text eol=lf
+*.8 text eol=lf
+rehearsal-wsl/*.service text eol=lf
+rehearsal-wsl/*.socket text eol=lf
+rehearsal-wsl/*.conf text eol=lf

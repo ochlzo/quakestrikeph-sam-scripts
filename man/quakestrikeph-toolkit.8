@@ -1,0 +1,227 @@
+.\" Adapted from Appendix C of the IT 123 Final Project Guide v01.
+.\" AI assistance: ChatGPT helped draft and verify this manual page.
+.TH QUAKESTRIKEPH-TOOLKIT 8 "18 November 2026" "QuakeStrikePH" "System Administration"
+.SH NAME
+quakestrikeph-toolkit \- administer the QuakeStrikePH Option 1C demo
+.SH SYNOPSIS
+.B sudo bash quakestrikeph-install.sh
+\-\-archive FILE \-\-config FILE [\-\-directory PATH]
+.PP
+.B sudo bash quakestrikeph-accounts.sh
+[\-\-directory PATH]
+.PP
+.B sudo bash quakestrikeph-config.sh
+[\-\-output FILE] [\-\-directory PATH]
+.PP
+.B sudo bash quakestrikeph-seed.sh
+[\-\-directory PATH]
+.PP
+.B sudo bash quakestrikeph-uninstall.sh
+[\-\-directory PATH] [\-\-confirm]
+.PP
+.B sudo bash quakestrikeph-rebuild.sh
+\-\-archive FILE [\-\-config FILE] [\-\-directory PATH]
+.PP
+Each script also accepts
+.B \-\-help
+without root privileges or other arguments.
+.SH DESCRIPTION
+These six Bash scripts prepare, install, seed, remove, and rebuild the
+group's real QuakeStrikePH application for IT 123 Option 1C.
+They use sanitized historical test data, PostgreSQL, Redis, Docker Compose,
+and the reviewed SEIS 1.0.1 model.
+Run administrative operations as root on the group's dedicated Linux server.
+Installation supports Ubuntu 24.04 LTS and Debian 13 with systemd;
+course approval and execution testing are separate from distribution support.
+.PP
+Before an offline deployment, prepare the distribution's cached APT packages
+and the trusted application archive as described in TESTING.md.
+The archive must include source files, model artifacts,
+images.tar, and prediction-image.tar at its root.
+Keep credentials and existing bootstrap evidence out of the archive.
+.PP
+The default installation directory is /srv/quakestrikeph.
+For a different deployment directory, use a dedicated direct child of /srv.
+The fixed Compose project is quakestrikeph-sam:
+changing the directory does not create an independent Docker deployment.
+Keep the toolkit outside the installation directory.
+.PP
+The deployment order is accounts, configuration, installation, accounts again,
+then seed. The second accounts pass applies final file permissions.
+The rebuild script coordinates this order and checks web responses afterward.
+Use the same prepared release and matching credentials for repeated runs.
+Installation briefly stops application services; failed stages are not rolled back.
+.PP
+Compose uses the native local Docker socket and an explicit environment.
+Put application settings in the private configuration file;
+exported shell passwords and URLs cannot override it.
+The local website is http://127.0.0.1:4321.
+Map tiles and optional sign-in features may require internet access.
+.SH COMMANDS
+.TP
+.B quakestrikeph-install.sh
+Requires \-\-archive FILE (prepared .tar.gz) and \-\-config FILE
+(private environment file with mode 600 or 400).
+The optional \-\-directory PATH selects the installation directory.
+Rejects unsafe or unrelated destinations and conflicting installed credentials.
+Installs Docker from cached packages, loads images, deploys files,
+initializes the database/schema/model, and verifies Backend and Bulletin HTTP
+responses. Keeps existing database volumes. Run accounts again and then seed
+to finish the demo setup.
+.TP
+.B quakestrikeph-accounts.sh
+Accepts \-\-directory PATH.
+Creates or reuses the locked quakestrikeph user/group with UID/GID 10001,
+without a login shell or sudo/Docker group access.
+Sets code directories and shell scripts to 750 and ordinary files to 640,
+owned by root:quakestrikeph.
+Keeps the installed .env root-owned with mode 600.
+Bootstrap evidence is service-owned, with directories 700 and files 600.
+Refuses conflicting identities, unsafe paths, links, and mounted targets.
+Does not change Docker-managed database volume ownership.
+.TP
+.B quakestrikeph-config.sh
+Accepts \-\-output FILE (default /root/demo.env) and \-\-directory PATH.
+Validates an existing output without replacing it; if both configuration
+copies exist, they must match.
+If output is missing, reuses a valid installed .env.
+For a new setup, generates four distinct passwords and matching local URLs.
+New files are root-owned with mode 600; existing files may use 600 or 400.
+The output parent must already exist, be root-owned, and not be writable
+by group or others. Keep it outside Git and the installation directory.
+This is a generator for the reviewed demo, not a password-rotation tool.
+.TP
+.B quakestrikeph-seed.sh
+Accepts \-\-directory PATH and requires a completed installation.
+Checks the packaged fixture's SHA-256, imports it through the application,
+checks readiness, and starts Dispatcher and Prediction Worker.
+Waits up to five minutes for a successful saved forecast.
+A fresh import stores four earthquake records; repeated runs reuse records
+and bootstrap evidence. Four rejected fixture rows are expected.
+This seeds test data; it does not restore arbitrary backups or enable live ingestion.
+.TP
+.B quakestrikeph-uninstall.sh
+Accepts \-\-directory PATH. Without \-\-confirm, validates and previews
+removal without deleting anything.
+.B Adding \-\-confirm permanently deletes the deployment's data.
+Checks the project labels, container directory, expected data volumes,
+and service identity before removing project containers, associated anonymous
+storage, named data volumes, networks, installed files, and the service account/group.
+Keeps Docker packages, cached images, and preparation files outside the target.
+Already-absent resources are accepted, but local Docker must still respond.
+If removal fails, inspect the error before retrying; earlier removals are not undone.
+.TP
+.B quakestrikeph-rebuild.sh
+Requires \-\-archive FILE. Accepts \-\-config FILE (default /root/demo.env)
+and \-\-directory PATH. Keep the other deployment scripts beside it.
+Checks inputs and reports disk space with df for /tmp, /srv, and /var/lib;
+the report is not a guarantee of sufficient capacity.
+Runs the deployment sequence, waits for the seed's saved forecast,
+then checks Backend and Bulletin HTTP responses inside their containers.
+Stops on the first failure. Never calls uninstall or resets database volumes.
+Use a separate disposable server for a fresh rebuild test.
+.SH EXAMPLES
+Run these commands from the toolkit directory in Bash.
+Prepare inputs using TESTING.md first; these are real deployment commands.
+.PP
+Run the individual deployment stages in order:
+.nf
+sudo bash quakestrikeph-accounts.sh
+sudo bash quakestrikeph-config.sh \-\-output /root/demo.env
+sudo bash quakestrikeph-install.sh \e
+    \-\-archive /root/quakestrikeph-with-prediction.tar.gz \e
+    \-\-config /root/demo.env
+sudo bash quakestrikeph-accounts.sh
+sudo bash quakestrikeph-seed.sh
+.fi
+.PP
+Alternatively, use the coordinator on the prepared disposable server:
+.nf
+sudo bash quakestrikeph-rebuild.sh \e
+    \-\-archive /root/quakestrikeph-with-prediction.tar.gz
+.fi
+.PP
+Preview uninstall only:
+.nf
+sudo bash quakestrikeph-uninstall.sh \-\-directory /srv/quakestrikeph
+.fi
+.PP
+Do not add \-\-confirm on the working demo.
+Actual uninstall and an already-removed repeat run passed on the separate
+QuakeStrikePH-Rehearsal deployment. The working demo was not uninstalled.
+The subsequent real rebuild recreated its database and saved forecast using the
+preserved external credentials. Docker and cached images were retained as designed.
+The separate WSL testing environment completed the real rebuild after correcting its
+runtime network/mount setup, without deleting volumes or changing credentials.
+A complete repeat run also preserved the records, forecast ID, and credentials.
+See TESTING.md for the isolated testing network and host ports 14321/13000.
+An uninterrupted first attempt on another fresh import remains unverified.
+.PP
+Read help or this manual without running a deployment:
+.nf
+bash quakestrikeph-rebuild.sh \-\-help
+man ./man/quakestrikeph-toolkit.8
+.fi
+.SH FILES
+Paths below use the defaults; \-\-directory and configuration options
+change the corresponding locations.
+.TP
+.B README.md
+Bundle preparation, configuration requirements, verification records,
+and current testing limits.
+.TP
+.B /root/demo.env
+Private external demo configuration. Preserve it for repeated installations.
+.TP
+.B /srv/quakestrikeph/.env
+Installed root-only configuration. Never commit it or print its credentials.
+.TP
+.B /srv/quakestrikeph/infrastructure/compose.checkoff.yml
+Installer-generated override used with the application's Compose files.
+.TP
+.B /srv/quakestrikeph/bootstrap-snapshots/
+Private bootstrap evidence, including bootstrap-readiness.json.
+Keep it with its corresponding database; do not copy it into a fresh release.
+.TP
+.B /var/cache/apt/archives/
+Cached distribution packages for offline installation.
+.TP
+.B /var/run/docker.sock
+Native local Docker Engine socket.
+.TP
+.B Docker data and logs
+The named volumes are quakestrikeph-sam_postgres_data and
+quakestrikeph-sam_redis_data. Do not edit their host files directly.
+Scripts print diagnostics to the terminal; they do not create automatic
+log files or backups. Application logs are managed by Docker; for example,
+use docker logs quakestrikeph-sam-prediction-worker-1.
+Keep separately prepared archives and backups outside Git and the installation.
+.SH EXIT STATUS
+.TP
+.B 0
+Requested operation completed, help displayed, or uninstall preview completed.
+For rebuild, seed verification and both final HTTP checks passed.
+.TP
+.B 1
+A reported validation or operation failure. Read the diagnostic and correct
+the problem before retrying. Changes already made are not rolled back.
+.PP
+Any nonzero status is failure; a shell startup error or interruption may
+produce another nonzero status. No additional toolkit-specific codes are defined.
+.SH AUTHORS
+Armenta, Buergo, Candelaria, and Pispis.
+.PP
+AI assistance: ChatGPT helped prepare and verify the toolkit and this manual.
+Manual structure adapted from the faculty IT 123 Final Project Guide v01,
+Section 5.2 and Appendix C.
+.SH SEE ALSO
+.BR bash (1),
+.BR man (1),
+.BR df (1),
+.BR tar (1),
+.BR chmod (1),
+.BR docker (1),
+.BR apt-get (8),
+.BR systemctl (1)
+.PP
+README.md and each script's \-\-help output.

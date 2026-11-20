@@ -5,7 +5,7 @@
 # Usage: bash quakestrikeph-install.sh --help
 # AI assistance: ChatGPT explained Bash syntax and completed this script
 # using the group's existing style. The group must understand every line.
-# Sources: QuakeStrikePH docs/operations/local-runtime.md, section 9;
+# Sources: QuakeStrikePH docs/operations/local-runtime.md, web and worker setup;
 # https://docs.docker.com/reference/cli/docker/compose/up/
 # https://docs.docker.com/reference/cli/docker/compose/run/
 # https://manpages.debian.org/trixie/apt/apt-get.8.en.html
@@ -14,34 +14,43 @@ app_directory="/srv/quakestrikeph"
 app_archive=""
 config_file=""
 
+fail()
+{
+    echo "Installation failed: $*" >&2
+    exit 1
+}
+
 while [ "$#" -gt 0 ]
 do
     if [ "$1" = "--help" ]
     then
         echo "Usage: sudo bash quakestrikeph-install.sh --archive FILE --config FILE [--directory PATH]"
-        echo "Install the QuakeStrikePH local web application on Debian 13 with systemd."
+        echo "Install the QuakeStrikePH local web application on Ubuntu 24.04 or Debian 13 with systemd."
         echo ""
         echo "Options:"
         echo "  --archive FILE    Prepared offline application archive (.tar.gz)."
         echo "  --config FILE     Private demo environment file with permissions 600 or 400."
-        echo "  --directory PATH  Installation directory. Default: /srv/quakestrikeph"
+        echo "  --directory PATH  Dedicated /srv/NAME directory. Default: /srv/quakestrikeph"
         echo "  --help            Show this help message and exit."
         echo ""
         echo "Example:"
         echo "  sudo bash quakestrikeph-install.sh --archive ./quakestrikeph.tar.gz --config ./demo.env"
         echo ""
         echo "Prepare before the offline rebuild:"
-        echo "  Cache Debian packages with apt-get install --download-only docker.io docker-cli docker-compose."
+        echo "  Ubuntu 24.04: apt-get install --download-only docker.io docker-compose-v2"
+        echo "  Debian 13: apt-get install --download-only docker.io docker-cli docker-compose"
         echo "  Put the repository contents directly at the archive root, without a parent folder."
-        echo "  Include the reviewed model-artifacts/ directory and images.tar in that archive."
+        echo "  Include model-artifacts/, images.tar, and prediction-image.tar in that archive."
         echo "  Create images.tar with docker image save from the same working checkout."
         echo "  Include PostgreSQL, Redis, quakestrike-workers:local, quakestrike-backend:local,"
         echo "  and the development-stage quakestrike-bulletin:local image used by compose.local.yml."
+        echo "  Save quakestrike-prediction:local separately in prediction-image.tar."
+        echo "  Include infrastructure/compose.release.yml and the bundled historical test fixture."
         echo "  Use a dedicated installation directory and your group's trusted archive."
         echo "  Keep .env outside the archive. Supply a separate test-only configuration file."
         echo ""
         echo "This installs Bulletin, Backend, PostgreSQL, and Redis and initializes their schema."
-        echo "The database seed or restore script supplies demonstration earthquake records."
+        echo "Run quakestrikeph-seed.sh afterward to import demo records and start predictions."
         exit 0
 
     elif [ "$1" = "--directory" ] || [ "$1" = "--archive" ] || [ "$1" = "--config" ]
@@ -54,7 +63,7 @@ do
 
         if [ "$1" = "--directory" ]
         then
-            app_directory="$2"
+            app_directory="${2%/}"
         elif [ "$1" = "--archive" ]
         then
             app_archive="$2"
@@ -77,7 +86,7 @@ then
 fi
 
 #check the tools before changing the system
-for required_command in apt-get systemctl realpath tar mktemp stat grep cp chmod install cmp
+for required_command in apt-get systemctl realpath tar mktemp stat grep cp chmod install cmp find findmnt env
 do
     if ! command -v "$required_command" > /dev/null
     then
@@ -88,7 +97,24 @@ done
 
 if [ ! -d /run/systemd/system ]
 then
-    echo "Installation failed: start Debian with systemd enabled."
+    echo "Installation failed: start the server with systemd enabled."
+    exit 1
+fi
+
+if ! source /etc/os-release
+then
+    echo "Installation failed: could not read /etc/os-release."
+    exit 1
+fi
+
+if [ "$ID" = "ubuntu" ] && [ "$VERSION_ID" = "24.04" ]
+then
+    docker_packages=(docker.io docker-compose-v2)
+elif [ "$ID" = "debian" ] && [ "$VERSION_ID" = "13" ]
+then
+    docker_packages=(docker.io docker-cli docker-compose)
+else
+    echo "Installation failed: use Ubuntu 24.04 or Debian 13."
     exit 1
 fi
 
@@ -111,17 +137,33 @@ then
     exit 1
 fi
 
-#convert the path to absolute path para goods if ket san nirun yung script
-if ! app_directory=$(realpath -m -- "$app_directory")
-then
-    echo "Installation failed: could not resolve the directory path."
-    exit 1
-fi
+# Match the accounts script's guards before packages, services, or files change.
+[[ "$app_directory" =~ ^/srv/[a-zA-Z0-9._-]+$ ]] || fail "choose a dedicated /srv/NAME directory."
+[ "$(realpath -m -- "$app_directory")" = "$app_directory" ] || fail "do not use dot segments or symlink paths."
+[ ! -L "$app_directory" ] || fail "the application directory must not be a symlink."
+[ ! -e "$app_directory" ] || [ -d "$app_directory" ] || fail "the target is not a directory."
 
-if [ "$app_directory" = "/" ]
+mounted_paths=$(findmnt -rn -o TARGET) || fail "could not inspect mounted filesystems."
+while IFS= read -r mounted_path
+do
+    case "$mounted_path" in
+        "$app_directory"|"$app_directory"/*) fail "unmount $mounted_path before installing." ;;
+    esac
+done <<< "$mounted_paths"
+
+if [ -d "$app_directory" ]
 then
-    echo "Installation failed: choose a dedicated application directory."
-    exit 1
+    first_entry=$(find "$app_directory" -mindepth 1 -maxdepth 1 -print -quit) || fail "could not inspect the directory."
+    if [ -n "$first_entry" ]
+    then
+        [ -f "$app_directory/infrastructure/compose.checkoff.yml" ] &&
+        [ -f "$app_directory/apps/quakestrikeph-bulletin/package.json" ] ||
+            fail "nonempty directory is not an installation from the updated installer."
+        [ -f "$app_directory/.env" ] || fail "installation is missing its .env; recover the original credentials first."
+    fi
+    linked_file=$(find "$app_directory" -xdev \( -type l -o \( -type f -links +1 \) \) -print -quit) ||
+        fail "could not inspect links."
+    [ -z "$linked_file" ] || fail "review linked file before proceeding: $linked_file"
 fi
 
 #avoid changing database passwords during a repeated installation
@@ -133,7 +175,7 @@ then
 fi
 
 #keep credentials in the separate private file instead of sourcing it as Bash
-for setting in POSTGRES_PASSWORD MIGRATION_DB_PASSWORD WORKER_DB_PASSWORD BACKEND_DB_PASSWORD MODEL_RELEASE_ID BACKEND_IMAGE_TAG PHIVOLCS_CATALOG_URL
+for setting in POSTGRES_PASSWORD MIGRATION_DB_PASSWORD WORKER_DB_PASSWORD BACKEND_DB_PASSWORD MODEL_RELEASE_ID BACKEND_IMAGE_TAG PHIVOLCS_CATALOG_URL BOOTSTRAP_REQUIRED_AVAILABLE_THROUGH
 do
     if ! grep -Eq "^${setting}=.+" "$config_file"
     then
@@ -173,8 +215,9 @@ then
 fi
 
 for required_file in infrastructure/compose.yml infrastructure/compose.backend.yml \
-    infrastructure/compose.local.yml database/initialization/provision-roles.sh \
-    apps/quakestrikeph-bulletin/package.json model-artifacts/seis-1.0.1/manifest.json images.tar
+    infrastructure/compose.local.yml infrastructure/compose.release.yml \
+    workers/tests/fixtures/bootstrap/historical_snapshot.json database/initialization/provision-roles.sh \
+    apps/quakestrikeph-bulletin/package.json model-artifacts/seis-1.0.1/manifest.json images.tar prediction-image.tar
 do
     if [ ! -f "$staging_directory/$required_file" ]
     then
@@ -189,15 +232,50 @@ then
     exit 1
 fi
 
+# Runtime evidence belongs to this database and must never be replaced by a bundle.
+if [ -e "$staging_directory/bootstrap-snapshots" ]
+then
+    echo "Installation failed: keep bootstrap-snapshots/ out of the application archive."
+    exit 1
+fi
+
+# Adapted from the application's release Compose mounts. Relative host paths also
+# support --directory; the container path preserves the earlier manual import.
+if ! cat > "$staging_directory/infrastructure/compose.checkoff.yml" <<'YAML'
+# AI-assisted course override; application service definitions remain upstream.
+services:
+  bulletin:
+    restart: unless-stopped
+  release-init:
+    volumes:
+      - ../bootstrap-snapshots:/app/workers/bootstrap-snapshots
+  dispatcher:
+    environment:
+      ALERT_RESOLUTION_ENABLED: "false"
+    volumes:
+      - ../bootstrap-snapshots:/app/workers/bootstrap-snapshots:ro
+  prediction-worker:
+    volumes:
+      - ../bootstrap-snapshots:/app/workers/bootstrap-snapshots:ro
+YAML
+then
+    echo "Installation failed: could not prepare the check-off Compose configuration."
+    exit 1
+fi
+
 #install the downloaded docker package
+# Image loading and Compose must use the same native local engine.
+export DOCKER_HOST=unix:///var/run/docker.sock
+unset DOCKER_CONTEXT DOCKER_TLS_VERIFY DOCKER_CERT_PATH DOCKER_TLS
+
 echo "Installing Docker from cached packages..."
-if ! apt-get --no-download install -y docker.io docker-cli docker-compose
+if ! apt-get --no-download install -y "${docker_packages[@]}"
 then
     echo "Installation failed: could not install Docker from cached packages."
     exit 1
 fi
 
-#start the docker immediately and enable it when Debian boots
+#start Docker now and enable it at boot
 if ! systemctl enable --now docker
 then
     echo "Installation failed: could not enable and start Docker."
@@ -218,14 +296,17 @@ fi
 
 #load the prepared images so Compose can start without downloading or building
 echo "Loading the prepared Docker images..."
-if ! docker image load --input "$staging_directory/images.tar"
-then
-    echo "Installation failed: could not load images.tar."
-    exit 1
-fi
+for image_archive in images.tar prediction-image.tar
+do
+    if ! docker image load --input "$staging_directory/$image_archive"
+    then
+        echo "Installation failed: could not load $image_archive."
+        exit 1
+    fi
+done
 
 #the source archive remains available for the next rebuild
-if ! rm -- "$staging_directory/images.tar"
+if ! rm -- "$staging_directory/images.tar" "$staging_directory/prediction-image.tar"
 then
     echo "Installation failed: could not remove the temporary image archive."
     exit 1
@@ -255,14 +336,28 @@ then
     exit 1
 fi
 
+# The existing worker image runs as UID/GID 10001 and writes bootstrap evidence.
+if ! install -d -o 10001 -g 10001 -m 700 -- "$app_directory/bootstrap-snapshots"
+then
+    echo "Installation failed: could not prepare the private bootstrap evidence directory."
+    exit 1
+fi
+
 #reuse the same Compose options for every step; "$@" passes the function arguments
 #the separate project name keeps this course demo's volumes together
 compose()
 {
+    # Compose gives shell variables precedence over --env-file. Start with only
+    # tool lookup, Docker's home, and the fixed local demo settings.
+    env -i PATH="$PATH" HOME="$HOME" DOCKER_HOST=unix:///var/run/docker.sock \
+    WORKER_IMAGE_TAG=local \
+    BOOTSTRAP_RUN_MANIFEST=/app/workers/bootstrap-snapshots/bootstrap-readiness.json \
     docker compose --project-name quakestrikeph-sam --env-file "$app_directory/.env" \
         -f "$app_directory/infrastructure/compose.yml" \
         -f "$app_directory/infrastructure/compose.backend.yml" \
-        -f "$app_directory/infrastructure/compose.local.yml" "$@"
+        -f "$app_directory/infrastructure/compose.local.yml" \
+        -f "$app_directory/infrastructure/compose.release.yml" \
+        -f "$app_directory/infrastructure/compose.checkoff.yml" "$@"
 }
 
 if ! compose config --quiet
@@ -271,7 +366,7 @@ then
     exit 1
 fi
 
-if ! required_images=$(compose --profile init config --images)
+if ! required_images=$(compose --profile init --profile prediction config --images)
 then
     echo "Installation failed: could not read the required image names."
     exit 1
@@ -281,15 +376,16 @@ for image in $required_images
 do
     if ! docker image inspect "$image" > /dev/null
     then
-        echo "Installation failed: images.tar does not provide $image."
+        echo "Installation failed: the prepared image archives do not provide $image."
         exit 1
     fi
 done
 
-#stop the web services before migrations when this installer runs again
-if ! compose stop backend-api bulletin
+# Stop consumers as well as web services before repeating database setup.
+if ! compose --profile prediction --profile beat --profile alerts stop \
+    beat data-ingestor dispatcher prediction-worker alert-worker alert-reconciliation backend-api bulletin
 then
-    echo "Installation failed: could not stop the web services before database setup."
+    echo "Installation failed: could not stop application services before database setup."
     exit 1
 fi
 
@@ -310,6 +406,12 @@ fi
 if ! compose run --rm --no-deps --pull never local-init quakestrike migrate
 then
     echo "Installation failed: could not apply the database migrations."
+    exit 1
+fi
+
+if ! compose exec -T postgres sh /opt/quakestrike/provision-roles.sh grant-worker
+then
+    echo "Installation failed: could not grant the worker database permissions."
     exit 1
 fi
 
@@ -341,7 +443,18 @@ then
     exit 1
 fi
 
+# Reuse existing data and evidence on repeat installs; never create a new backfill here.
+if [ -f "$app_directory/bootstrap-snapshots/bootstrap-readiness.json" ]
+then
+    if ! compose run --rm --no-deps --pull never release-init quakestrike startup-check ||
+       ! compose --profile prediction up -d --no-deps --no-build --pull never --wait --wait-timeout 180 dispatcher prediction-worker
+    then
+        echo "Installation failed: existing bootstrap evidence or prediction services are not ready."
+        exit 1
+    fi
+fi
+
 echo "Installation successful. Application directory: $app_directory"
 echo "Open http://127.0.0.1:4321 on the machine hosting this demo."
-echo "Use the database seed or restore script to load your test earthquake records."
+echo "Run quakestrikeph-seed.sh --directory '$app_directory' to load and verify the demo forecast."
 exit 0
