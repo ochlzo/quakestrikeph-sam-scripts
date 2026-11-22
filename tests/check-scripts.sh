@@ -1,7 +1,7 @@
 #!/bin/bash
 # AI-assisted checks: real Bash parsing and input validation; package/service
 # commands are substitutes in the image-load failure test. No real installation.
-set -eu
+set -euo pipefail
 repository=$(cd -- "$(dirname -- "$0")/.." && pwd)
 work=$(mktemp -d)
 trap 'rm -rf -- "$work"' EXIT
@@ -9,9 +9,12 @@ trap 'rm -rf -- "$work"' EXIT
 for script in quakestrikeph-install.sh quakestrikeph-seed.sh quakestrikeph-accounts.sh quakestrikeph-config.sh quakestrikeph-uninstall.sh quakestrikeph-rebuild.sh
 do
     bash -n "$repository/$script"
-    bash "$repository/$script" --help > "$work/help"
-    grep -q Usage "$work/help"
-    grep -q Example "$work/help"
+    # Save key help lines para sa standards checks
+    bash "$repository/$script" --help |
+        grep -E '^Usage:|^[[:space:]]*Example|--help' > "$work/help"
+    grep -q '^Usage:' "$work/help"
+    grep -q '^[[:space:]]*Example' "$work/help"
+    grep -Fq -- '--help' "$work/help"
     for option in --unknown --directory
     do
         if bash "$repository/$script" "$option" > "$work/error" 2>&1

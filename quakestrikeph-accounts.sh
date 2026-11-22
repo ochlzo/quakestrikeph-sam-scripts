@@ -22,7 +22,7 @@ while [ "$#" -gt 0 ]
 do
     if [ "$1" = "--help" ]
     then
-        echo "Usage: sudo bash quakestrikeph-accounts.sh [--directory /srv/NAME]"
+        echo "Usage: sudo bash quakestrikeph-accounts.sh [--directory /srv/NAME] [--help]"
         echo "Create a locked quakestrikeph service user/group with UID/GID 10001."
         echo "Default directory: /srv/quakestrikeph. Use a dedicated directory directly under /srv."
         echo "Run before installation to create the account, and after installation to apply permissions."

@@ -25,7 +25,7 @@ while [ "$#" -gt 0 ]
 do
     if [ "$1" = "--help" ]
     then
-        echo "Usage: sudo bash quakestrikeph-uninstall.sh [--directory /srv/NAME] [--confirm]"
+        echo "Usage: sudo bash quakestrikeph-uninstall.sh [--directory /srv/NAME] [--confirm] [--help]"
         echo "Preview removal of the quakestrikeph-sam deployment by default."
         echo "--confirm permanently removes its containers, database/cache volumes, networks,"
         echo "installed files (including .env and bootstrap evidence), and service account/group."

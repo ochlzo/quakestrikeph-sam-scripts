@@ -14,7 +14,7 @@ while [ "$#" -gt 0 ]
 do
     if [ "$1" = "--help" ]
     then
-        echo "Usage: sudo bash quakestrikeph-seed.sh [--directory PATH]"
+        echo "Usage: sudo bash quakestrikeph-seed.sh [--directory PATH] [--help]"
         echo "Import the packaged historical test fixture and verify its forecast."
         echo "Run quakestrikeph-install.sh first. Default directory: /srv/quakestrikeph"
         echo "Repeated runs reuse the same bootstrap evidence and existing database records."

@@ -23,7 +23,7 @@ while [ "$#" -gt 0 ]
 do
     if [ "$1" = "--help" ]
     then
-        echo "Usage: sudo bash quakestrikeph-config.sh [--output FILE] [--directory PATH]"
+        echo "Usage: sudo bash quakestrikeph-config.sh [--output FILE] [--directory PATH] [--help]"
         echo "Prepare a private local demo configuration. Default output: /root/demo.env"
         echo "Default installation directory: /srv/quakestrikeph"
         echo "Existing files are checked and kept unchanged, never repaired or overwritten."

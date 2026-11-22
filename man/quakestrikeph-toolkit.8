@@ -1,6 +1,6 @@
 .\" Adapted from Appendix C of the IT 123 Final Project Guide v01.
 .\" AI assistance: ChatGPT helped draft and verify this manual page.
-.TH QUAKESTRIKEPH-TOOLKIT 8 "18 November 2026" "QuakeStrikePH" "System Administration"
+.TH QUAKESTRIKEPH-TOOLKIT 8 "23 November 2026" "QuakeStrikePH" "System Administration"
 .SH NAME
 quakestrikeph-toolkit \- administer the QuakeStrikePH Option 1C demo
 .SH SYNOPSIS
@@ -55,7 +55,10 @@ Installation briefly stops application services; failed stages are not rolled ba
 Compose uses the native local Docker socket and an explicit environment.
 Put application settings in the private configuration file;
 exported shell passwords and URLs cannot override it.
-The local website is http://127.0.0.1:4321.
+The standard local website is http://127.0.0.1:4321.
+In FreshTest, open http://127.0.0.1:24321 from Windows and check the API at
+http://127.0.0.1:23000/healthz.
+Rehearsal uses Windows ports 14321 for the website and 13000 for the API.
 Map tiles and optional sign-in features may require internet access.
 .SH COMMANDS
 .TP
@@ -121,10 +124,18 @@ then checks Backend and Bulletin HTTP responses inside their containers.
 Stops on the first failure. Never calls uninstall or resets database volumes.
 Use a separate disposable server for a fresh rebuild test.
 .SH EXAMPLES
-Run these commands from the toolkit directory in Bash.
-Prepare inputs using TESTING-NOTES.md first; these are real deployment commands.
+Run deployment commands from the toolkit directory on the authorized test
+server. Prepare the cached packages and archive using TESTING-NOTES.md.
 .PP
-Run the individual deployment stages in order:
+Run the timed rebuild as root from the prepared FreshTest Linux shell.
+.nf
+time bash quakestrikeph-rebuild.sh \e
+    \-\-archive /root/quakestrikeph-with-prediction.tar.gz \e
+    \-\-config /root/fresh-test.env
+.fi
+.PP
+Run the following individual stages with the default configuration path.
+For FreshTest, use /root/fresh-test.env for the configuration path.
 .nf
 sudo bash quakestrikeph-accounts.sh
 sudo bash quakestrikeph-config.sh \-\-output /root/demo.env
@@ -135,31 +146,20 @@ sudo bash quakestrikeph-accounts.sh
 sudo bash quakestrikeph-seed.sh
 .fi
 .PP
-Alternatively, use the coordinator on the prepared disposable server:
-.nf
-sudo bash quakestrikeph-rebuild.sh \e
-    \-\-archive /root/quakestrikeph-with-prediction.tar.gz
-.fi
-.PP
-Preview uninstall only:
+Preview uninstall on the test server.
 .nf
 sudo bash quakestrikeph-uninstall.sh \-\-directory /srv/quakestrikeph
 .fi
 .PP
-Do not add \-\-confirm on the working demo.
-Actual uninstall and an already-removed repeat run passed on the separate
-QuakeStrikePH-Rehearsal deployment. The working demo was not uninstalled.
-The subsequent real rebuild recreated its database and saved forecast using the
-preserved external credentials. Docker and cached images were retained as designed.
-The separate WSL testing environment completed the real rebuild after correcting its
-runtime network/mount setup, without deleting volumes or changing credentials.
-A complete repeat run also preserved the records, forecast ID, and credentials.
-See TESTING-NOTES.md for the isolated testing network and host ports 14321/13000.
-An uninterrupted first attempt on another fresh import remains unverified.
+Use \-\-confirm only when permanent removal is intended on a disposable test server.
 .PP
-Read help or this manual without running a deployment:
+Read script help from the toolkit directory.
 .nf
 bash quakestrikeph-rebuild.sh \-\-help
+.fi
+.PP
+Open this manual from the repository root.
+.nf
 man ./man/quakestrikeph-toolkit.8
 .fi
 .SH FILES
@@ -167,11 +167,22 @@ Paths below use the defaults; \-\-directory and configuration options
 change the corresponding locations.
 .TP
 .B README.md
-Bundle preparation, configuration requirements, verification records,
-and current testing limits.
+Toolkit reference and configuration requirements.
+.TP
+.B TESTING.md
+Commands and expected output for the six scripts in FreshTest.
+.TP
+.B TESTING-NOTES.md
+Offline bundle preparation, WSL setup, and recorded test results.
+.TP
+.B /root/quakestrikeph-with-prediction.tar.gz
+Prepared application archive used in the examples. Pass its path with
+\-\-archive.
 .TP
 .B /root/demo.env
-Private external demo configuration. Preserve it for repeated installations.
+Default private external configuration. FreshTest uses /root/fresh-test.env
+and Rehearsal uses /root/rehearsal.env. Preserve the matching file for
+repeated installations.
 .TP
 .B /srv/quakestrikeph/.env
 Installed root-only configuration. Never commit it or print its credentials.
@@ -209,7 +220,13 @@ the problem before retrying. Changes already made are not rolled back.
 Any nonzero status is failure; a shell startup error or interruption may
 produce another nonzero status. No additional toolkit-specific codes are defined.
 .SH AUTHORS
-Armenta, Buergo, Candelaria, and Pispis.
+Sean Dylan L. Armenta
+.br
+Chenie Niña E. Buergo
+.br
+John Benedict B. Candelaria
+.br
+Dan Emanuel G. Pispis
 .PP
 AI assistance: ChatGPT helped prepare and verify the toolkit and this manual.
 Manual structure adapted from the faculty IT 123 Final Project Guide v01,
