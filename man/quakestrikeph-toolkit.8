@@ -1,0 +1,143 @@
+.\" Adapted from Appendix C of the IT 123 Final Project Guide v01.
+.\" AI assistance: Antigravity and ChatGPT helped draft and review this manual page.
+.TH QUAKESTRIKEPH-TOOLKIT 8 "22 November 2026" "QuakeStrikePH" "System Administration"
+.SH NAME
+quakestrikeph-toolkit \- provision, restore, remove, and rebuild the QuakeStrikePH demo
+.SH SYNOPSIS
+.B sudo bash quakestrikeph-accounts.sh
+[\-\-directory PATH]
+.PP
+.B sudo bash quakestrikeph-config.sh
+[\-\-output FILE] [\-\-directory PATH]
+.PP
+.B sudo bash quakestrikeph-install.sh
+\-\-archive FILE \-\-config FILE [\-\-directory PATH]
+.PP
+.B sudo bash quakestrikeph-restore.sh
+\-\-backup FILE [\-\-directory PATH]
+.PP
+.B sudo bash quakestrikeph-uninstall.sh
+[\-\-directory PATH] [\-\-confirm]
+.PP
+.B sudo bash quakestrikeph-rebuild.sh
+\-\-archive FILE \-\-backup FILE [\-\-config FILE] [\-\-directory PATH]
+.PP
+Every script also accepts
+.B \-\-help
+without root privileges.
+.SH DESCRIPTION
+These six Bash scripts implement IT 123 Option 1C (Provision and Rebuild) for the
+QuakeStrikePH web application (Bulletin, Backend, PostgreSQL, and Redis).
+They target Ubuntu 24.04 LTS and Debian 13 with systemd and support offline
+deployment using cached APT packages and two prepared archives:
+.B quakestrikeph-app.tar.gz
+(application source, model artifacts, and exported Docker images) and
+.B quakestrikeph-db-backup.sql.gz
+(compressed PostgreSQL backup containing public/test earthquake and forecast data only).
+.PP
+The default installation folder is /srv/quakestrikeph and the Docker Compose
+project name is quakestrikeph-sam. Every script is safe to run twice without
+duplicating accounts, rotating existing credentials, or wiping existing database records.
+.SH COMMANDS
+.TP
+.B quakestrikeph-accounts.sh
+Creates or reuses the locked service user and group
+.B quakestrikeph
+(UID/GID 10001, no login shell, no sudo or Docker access) and applies least-privilege
+permissions to the application folder (750 for directories and scripts, 640 for
+ordinary files, 600 root-only for .env).
+.TP
+.B quakestrikeph-config.sh
+Generates a private root-only .env file (mode 600) with four random OpenSSL
+passwords and matching database URLs. If the output file already exists, it is
+kept unchanged; if output is missing and an installed .env exists, it is copied
+to keep database credentials in sync.
+.TP
+.B quakestrikeph-install.sh
+Validates inputs, installs Docker offline from the local APT cache, loads
+images.tar, copies application files and .env into /srv/quakestrikeph, runs
+database role creation, migrations, and model registration, starts Backend and
+Bulletin, and verifies both HTTP responses.
+.TP
+.B quakestrikeph-restore.sh
+Checks gzip integrity of the supplied .sql.gz backup, skips restore if earthquake
+records already exist, streams the backup into PostgreSQL, refreshes role grants,
+and confirms records were loaded.
+.TP
+.B quakestrikeph-uninstall.sh
+Previews removal of quakestrikeph-sam containers, volumes, networks, application
+files, and the quakestrikeph service account by default. Passing
+.B \-\-confirm
+performs the deletion while keeping Docker, cached images, backups, and external
+configuration files intact.
+.TP
+.B quakestrikeph-rebuild.sh
+Checks disk space with df, verifies both compressed archives, runs accounts,
+config, install, final permissions, and database restore in order, and verifies
+Backend and Bulletin HTTP responses.
+.SH EXAMPLES
+Full offline rebuild on a blank server:
+.nf
+sudo bash quakestrikeph-rebuild.sh \e
+    \-\-archive /root/quakestrikeph-app.tar.gz \e
+    \-\-backup /root/quakestrikeph-db-backup.sql.gz
+.fi
+.PP
+Run the individual scripts in order:
+.nf
+sudo bash quakestrikeph-accounts.sh
+sudo bash quakestrikeph-config.sh \-\-output /root/demo.env
+sudo bash quakestrikeph-install.sh \e
+    \-\-archive /root/quakestrikeph-app.tar.gz \e
+    \-\-config /root/demo.env
+sudo bash quakestrikeph-accounts.sh
+sudo bash quakestrikeph-restore.sh \e
+    \-\-backup /root/quakestrikeph-db-backup.sql.gz
+.fi
+.PP
+Preview clean uninstall (safe, deletes nothing):
+.nf
+sudo bash quakestrikeph-uninstall.sh
+.fi
+.PP
+Perform confirmed clean uninstall:
+.nf
+sudo bash quakestrikeph-uninstall.sh \-\-confirm
+.fi
+.SH FILES
+.TP
+.B /root/demo.env
+Private external configuration file (mode 600, root-owned). Keep outside Git.
+.TP
+.B /srv/quakestrikeph/
+Default application installation directory.
+.TP
+.B /srv/quakestrikeph/.env
+Installed root-only configuration file (mode 600).
+.TP
+.B /srv/quakestrikeph/infrastructure/compose.checkoff.yml
+Compose override generated during installation.
+.TP
+.B /var/cache/apt/archives/
+Cached APT packages used for offline Docker installation.
+.SH EXIT STATUS
+.TP
+.B 0
+Command succeeded, help output was printed, or uninstall preview completed.
+.TP
+.B 1
+A validation check or deployment step failed. Check the error message on stderr.
+.SH AUTHORS
+Armenta, Buergo, Candelaria, and Pispis.
+.PP
+AI assistance: Antigravity and ChatGPT helped simplify and verify these scripts and manual page.
+.SH SEE ALSO
+.BR bash (1),
+.BR man (1),
+.BR df (1),
+.BR tar (1),
+.BR gzip (1),
+.BR chmod (1),
+.BR docker (1),
+.BR apt-get (8),
+.BR systemctl (1)

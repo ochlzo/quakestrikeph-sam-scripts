@@ -2,47 +2,47 @@
 
 ## Scope
 
-This repository contains IT 123 Option 1C administration scripts for QuakeStrikePH.
-Read `README.md` before changing installation behavior or preparing a server test.
-The installer uses the application's existing local Compose files and database setup commands.
-When changing those commands, inspect the matching application source and its local runtime guide first.
+This repository contains the IT 123 Option 1C (Provision and Rebuild) administration scripts for QuakeStrikePH.
 The application source lives in a separate QuakeStrikePH repository.
+Read `README.md` before changing installation or restore behavior.
+
+This toolkit uses two prepared offline inputs:
+1. A compressed application archive (`quakestrikeph-app.tar.gz`) containing tracked source files, `model-artifacts/`, and `images.tar`.
+2. A compressed PostgreSQL backup (`quakestrikeph-db-backup.sql.gz`) containing only public/test earthquake, model, and forecast data (never real user or account records).
+
+Local preparation helpers live under `tools/` and are not part of the six submitted Option 1C scripts.
 
 ## Work with the group
 
-John Benedict is the lead developer. Chenie leads project management, Dan handles UX and QA, and Sean handles UI development.
-Use simple explanations appropriate for junior developers and treat each team member's work with respect.
-During coaching, give the requested hints and explain new syntax when it first appears.
-When the user requests implementation, complete the requested code and explain its execution order.
-State assumptions and distinguish verified results from planned behavior.
+- John Benedict is the lead developer (upper-junior).
+- Chenie is the project lead and manager (junior).
+- Dan handles UX and QA (junior).
+- Sean handles UI development (super-junior).
+
+Use simple, direct explanations and treat every member's work with respect.
+Every member must be able to explain every line of all six scripts during individual Q&A.
 
 ## Code style
 
-- Follow the existing Bash style, descriptive names, and direct control flow.
-- Keep changes small enough for the group to trace and explain.
-- Use comments for reasons and behavior that the commands do not make clear.
-- Keep script files in LF format.
-- Preserve working `--help` output, clear failure messages, and meaningful exit statuses.
-- Validate required inputs before installing packages or starting application services.
-- Keep repeated runs safe for the application's existing records and volumes.
-- Explain concrete failure modes before proposing complexity beyond the student project's needs.
+- Write scripts in basic, readable Bash (`if`/`then`/`fi`, `for`, `while`, clear variable names).
+- Favor simplicity over heavy defensive edge-case guards. Do not add complex shell idioms (like `find -prune -o`, octal bitwise math, `env -i` wrappers, or `findmnt` loops) unless required for safe demo operation.
+- Keep all script files in LF format and executable (`chmod +x`).
+- Include a header comment block with purpose, authors, usage, AI assistance disclosure, and source credits.
+- Preserve working `--help` output with options and at least one example.
+- Check root privileges and required inputs before making system changes.
+- Keep every script safe to run twice (idempotent) without duplicating accounts, overwriting credentials, or wiping existing database records.
+- Print clear success and failure messages and return exit status `0` on success or non-zero on failure.
 
 ## Course requirements
 
-Read the faculty project guide before changing an option requirement or claiming course compliance.
-In the shared coursework workspace, the guide is located at `../IT123_Final-Project_ProjectGuide.html`.
-Standalone clones need the faculty-supplied copy. Treat Debian and WSL presentation approval as unconfirmed until the user supplies confirmation.
+Check the faculty project guide (`../IT123_Final-Project_ProjectGuide.html` in the shared coursework workspace) before changing an option requirement.
 
-- Disclose AI help in script headers and credit adapted code above the relevant code.
-- Explain changed decisions and state updates so the group can understand every line.
-- Use test data and the group's authorized server for execution.
-- Keep credentials in owner-readable configuration files outside Git.
-- Keep application archives, exported images, database backups, and real user records outside this repository.
+- Disclose AI assistance in script headers and credit adapted code above the relevant code.
+- Use test or sanitized public earthquake data only. Never include real user accounts, passwords, or private keys in this repository or in demo backups.
+- Keep credentials in a root-only (`600` or `400`) `.env` file outside Git and outside the application archive.
+- Keep the section-8 manual page in `man/quakestrikeph-toolkit.8` aligned with all six scripts.
 
 ## Verification and handoff
 
-For documentation or script authoring, run Bash syntax and help checks without invoking installation.
-For requested server execution, use the group's disposable environment and the prepared inputs described in `README.md`.
-After installer changes, check argument errors, failure propagation, and a repeated run when the available environment permits.
-Report which checks used command substitutes and which reached actual Docker services or PostgreSQL.
-Finish with changed files, the behavior each change produces, test results, and remaining verification gaps.
+- After editing scripts, run `bash -n` syntax checks and `--help` checks on every script.
+- When running real deployment tests, use a disposable clean Linux server/WSL clone with cached APT packages and report what passed, what failed, and any remaining gaps.
