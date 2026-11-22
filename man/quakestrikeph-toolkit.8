@@ -31,9 +31,9 @@ QuakeStrikePH web application (Bulletin, Backend, PostgreSQL, and Redis).
 They target Ubuntu 24.04 LTS and Debian 13 with systemd and support offline
 deployment using cached APT packages and two prepared archives:
 .B quakestrikeph-app.tar.gz
-(application source, model artifacts, and exported Docker images) and
+(application source and exported Docker images for Postgres, Redis, Backend, and Bulletin) and
 .B quakestrikeph-db-backup.sql.gz
-(compressed PostgreSQL backup containing public/test earthquake and forecast data only).
+(compressed PostgreSQL backup containing full schema plus public/test earthquake and forecast data only).
 .PP
 The default installation folder is /srv/quakestrikeph and the Docker Compose
 project name is quakestrikeph-sam. Every script is safe to run twice without
@@ -55,14 +55,15 @@ to keep database credentials in sync.
 .TP
 .B quakestrikeph-install.sh
 Validates inputs, installs Docker offline from the local APT cache, loads
-images.tar, copies application files and .env into /srv/quakestrikeph, runs
-database role creation, migrations, and model registration, starts Backend and
-Bulletin, and verifies both HTTP responses.
+images.tar, copies application files and .env into /srv/quakestrikeph, starts
+PostgreSQL and Redis, and creates base database roles. On repeat runs after a
+restore, it also restarts Backend and Bulletin and verifies HTTP responses.
 .TP
 .B quakestrikeph-restore.sh
 Checks gzip integrity of the supplied .sql.gz backup, skips restore if earthquake
-records already exist, streams the backup into PostgreSQL, refreshes role grants,
-and confirms records were loaded.
+records already exist, streams the schema and earthquake/forecast data into
+PostgreSQL, configures Backend and Worker role grants, starts Backend and
+Bulletin, and confirms records were loaded.
 .TP
 .B quakestrikeph-uninstall.sh
 Previews removal of quakestrikeph-sam containers, volumes, networks, application

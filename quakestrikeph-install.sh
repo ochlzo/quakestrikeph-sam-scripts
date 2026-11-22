@@ -146,9 +146,9 @@ do
     fi
 done
 
-if [ ! -d "$staging_directory/model-artifacts" ] || [ -e "$staging_directory/.env" ]
+if [ -e "$staging_directory/.env" ]
 then
-    fail "include model-artifacts/ and keep .env outside the archive."
+    fail "keep .env outside the application archive."
 fi
 
 # Small Compose override so Bulletin restarts automatically like the other services.
@@ -197,34 +197,35 @@ compose config --quiet || fail "the Compose configuration is invalid."
 # Stop web services before repeating database setup (safe on first and repeat runs).
 compose stop backend-api bulletin > /dev/null 2>&1 || true
 
-# Step 4: Start PostgreSQL and Redis, then run database setup and migrations.
+# Step 4: Start PostgreSQL and Redis and create the base database roles.
 echo "Starting PostgreSQL and Redis..."
 compose up -d --no-build --pull never --wait --wait-timeout 120 postgres redis \
     || fail "PostgreSQL or Redis did not become healthy."
 
 compose exec -T postgres sh /opt/quakestrike/provision-roles.sh create \
-    || fail "could not create database roles."
-compose run --rm --no-deps --pull never local-init quakestrike migrate \
-    || fail "could not apply database migrations."
-compose exec -T postgres sh /opt/quakestrike/provision-roles.sh grant-worker \
-    || fail "could not grant worker database permissions."
-compose run --rm --no-deps --pull never local-init quakestrike register-model-release \
-    || fail "could not register the packaged model release."
-compose run --rm --no-deps --pull never local-init quakestrike verify-model-release \
-    || fail "could not verify the packaged model release."
-compose exec -T postgres sh /opt/quakestrike/provision-roles.sh create-backend \
-    || fail "could not create the Backend database role."
+    || fail "could not create base database roles."
 
-# Step 5: Start Backend and Bulletin, then verify both HTTP responses.
-echo "Starting Backend and Bulletin..."
-compose up -d --no-build --pull never --wait --wait-timeout 180 postgres redis backend-api bulletin \
-    || fail "the web application did not become healthy."
+# Step 5: If the schema is already restored (repeat install), restart web services and verify HTTP.
+# On a fresh install, quakestrikeph-restore.sh loads the schema/data and starts Backend + Bulletin.
+schema_ready=$(compose exec -T postgres psql -U quakestrike -d quakestrike \
+    -v ON_ERROR_STOP=1 -Atc "SELECT to_regclass('public.model_releases');") \
+    || fail "could not inspect PostgreSQL schema state."
 
-compose exec -T backend-api node -e "fetch('http://127.0.0.1:3000/healthz').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))" \
-    || fail "Backend HTTP check failed."
-compose exec -T bulletin node -e "fetch('http://127.0.0.1:4321/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))" \
-    || fail "Bulletin HTTP check failed."
-
-echo "Installation successful. Application directory: $app_directory"
-echo "Website is responding at http://127.0.0.1:4321"
+if [ -n "$schema_ready" ]
+then
+    compose exec -T postgres sh /opt/quakestrike/provision-roles.sh create-backend \
+        || fail "could not refresh Backend database role."
+    echo "Starting Backend and Bulletin..."
+    compose up -d --no-build --pull never --wait --wait-timeout 180 postgres redis backend-api bulletin \
+        || fail "the web application did not become healthy."
+    compose exec -T backend-api node -e "fetch('http://127.0.0.1:3000/healthz').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))" \
+        || fail "Backend HTTP check failed."
+    compose exec -T bulletin node -e "fetch('http://127.0.0.1:4321/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))" \
+        || fail "Bulletin HTTP check failed."
+    echo "Installation successful. Application directory: $app_directory"
+    echo "Website is responding at http://127.0.0.1:4321"
+else
+    echo "Installation successful. Application directory: $app_directory"
+    echo "PostgreSQL and Redis are healthy. Run quakestrikeph-restore.sh next to load data and start the website."
+fi
 exit 0

@@ -7,8 +7,8 @@ The application source lives in a separate QuakeStrikePH repository.
 Read `README.md` before changing installation or restore behavior.
 
 This toolkit uses two prepared offline inputs:
-1. A compressed application archive (`quakestrikeph-app.tar.gz`) containing tracked source files, `model-artifacts/`, and `images.tar`.
-2. A compressed PostgreSQL backup (`quakestrikeph-db-backup.sql.gz`) containing only public/test earthquake, model, and forecast data (never real user or account records).
+1. A compressed application archive (`quakestrikeph-app.tar.gz`) containing tracked source files and `images.tar` (Postgres, Redis, Backend, Bulletin — no workers).
+2. A compressed PostgreSQL backup (`quakestrikeph-db-backup.sql.gz`) containing the full schema plus public/test earthquake, model, and forecast data only (never real user or account records).
 
 Local preparation helpers live under `tools/` and are not part of the six submitted Option 1C scripts.
 

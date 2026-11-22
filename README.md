@@ -12,8 +12,8 @@ These six Bash scripts install, configure, restore, remove, and rebuild the loca
 | --- | --- |
 | `quakestrikeph-accounts.sh` | Creates/reuses the locked `quakestrikeph` service user/group (`10001:10001`) and applies least-privilege permissions. |
 | `quakestrikeph-config.sh` | Generates or reuses the private root-only `.env` file (`mode 600`) with random OpenSSL passwords. |
-| `quakestrikeph-install.sh` | Installs Docker from cached APT packages, loads `images.tar`, deploys files, runs migrations, and verifies HTTP responses. |
-| `quakestrikeph-restore.sh` | Verifies and restores the compressed `.sql.gz` earthquake/forecast backup into PostgreSQL (safe to run twice). |
+| `quakestrikeph-install.sh` | Installs Docker from cached APT packages, loads `images.tar`, deploys files, starts PostgreSQL + Redis, and creates base DB roles. |
+| `quakestrikeph-restore.sh` | Verifies and restores the compressed `.sql.gz` schema + earthquake/forecast backup into PostgreSQL, grants roles, and starts Backend + Bulletin. |
 | `quakestrikeph-uninstall.sh` | Previews removal by default; `--confirm` deletes only the `quakestrikeph-sam` deployment, volumes, and service account. |
 | `quakestrikeph-rebuild.sh` | Checks disk space (`df -h`) and archive integrity, runs all steps in order, and verifies the running website. |
 | `man/quakestrikeph-toolkit.8` | Section-8 manual page covering all six scripts (`man ./man/quakestrikeph-toolkit.8`). |
@@ -51,8 +51,8 @@ bash tools/prepare-demo-artifacts.sh \
 *(You can pass `--db-url "postgresql://..."` instead of `--compose-project` if dumping from a database URL.)*
 
 This produces two files to copy onto the blank server (for example into `/root/`):
-1. `quakestrikeph-app.tar.gz` — tracked app files, `model-artifacts/`, and `images.tar`.
-2. `quakestrikeph-db-backup.sql.gz` — compressed PostgreSQL data dump containing **only public/test earthquake, model, and forecast data** (user, account, alert, and session tables are excluded).
+1. `quakestrikeph-app.tar.gz` — tracked app files and `images.tar` (Postgres, Redis, Backend, Bulletin — no worker image or model artifacts needed).
+2. `quakestrikeph-db-backup.sql.gz` — compressed PostgreSQL dump containing the **full schema plus public/test earthquake, model, and forecast data** (user, account, alert, and session tables are created empty with 0 rows).
 
 Keep credentials (`.env`), archives, and backups outside this Git repository.
 

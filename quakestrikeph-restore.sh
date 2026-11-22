@@ -94,25 +94,34 @@ compose()
         -f "$app_directory/infrastructure/compose.checkoff.yml" "$@"
 }
 
-# Check existing row count so running this script twice stays safe.
-existing_rows=$(compose exec -T postgres psql -U quakestrike -d quakestrike \
-    -v ON_ERROR_STOP=1 -Atc "SELECT COUNT(*) FROM earthquake_event_revisions;") \
+# Check whether the schema and earthquake records already exist (safe to run twice).
+table_exists=$(compose exec -T postgres psql -U quakestrike -d quakestrike \
+    -v ON_ERROR_STOP=1 -Atc "SELECT to_regclass('public.earthquake_event_revisions');") \
     || fail "could not query PostgreSQL. Make sure the database is running."
+
+existing_rows=0
+if [ -n "$table_exists" ]
+then
+    existing_rows=$(compose exec -T postgres psql -U quakestrike -d quakestrike \
+        -v ON_ERROR_STOP=1 -Atc "SELECT COUNT(*) FROM earthquake_event_revisions;") \
+        || fail "could not count existing earthquake records."
+fi
 
 if [ "$existing_rows" -gt 0 ]
 then
     echo "Database already contains $existing_rows earthquake records; keeping existing data."
-    exit 0
+else
+    # Stream the decompressed SQL dump (schema + earthquake/forecast data) into PostgreSQL.
+    echo "Restoring schema and earthquake/forecast data from $backup_file..."
+    if ! gunzip -c "$backup_file" | compose exec -T postgres psql -U quakestrike -d quakestrike -v ON_ERROR_STOP=1 > /dev/null
+    then
+        fail "could not restore SQL backup into PostgreSQL."
+    fi
 fi
 
-# Stream the decompressed SQL dump directly into PostgreSQL.
-echo "Restoring earthquake and forecast data from $backup_file..."
-if ! gunzip -c "$backup_file" | compose exec -T postgres psql -U quakestrike -d quakestrike -v ON_ERROR_STOP=1 > /dev/null
-then
-    fail "could not restore SQL backup into PostgreSQL."
-fi
-
-# Reapply database role grants so Backend and Worker roles can read restored tables.
+# Grant Backend and Worker roles access to the restored tables.
+compose exec -T postgres sh /opt/quakestrike/provision-roles.sh create-backend \
+    || fail "could not configure Backend database role."
 compose exec -T postgres sh /opt/quakestrike/provision-roles.sh grant-worker \
     || fail "could not refresh worker database permissions."
 
@@ -124,6 +133,11 @@ if [ "$restored_rows" -le 0 ]
 then
     fail "restore finished, but no earthquake records were found in the database."
 fi
+
+# Start Backend and Bulletin now that the schema, model_releases, and grants are ready.
+echo "Starting Backend and Bulletin..."
+compose up -d --no-build --pull never --wait --wait-timeout 180 backend-api bulletin \
+    || fail "Backend or Bulletin did not become healthy."
 
 echo "Database restore successful: $restored_rows earthquake records loaded."
 echo "Open http://127.0.0.1:4321 to view the restored data."

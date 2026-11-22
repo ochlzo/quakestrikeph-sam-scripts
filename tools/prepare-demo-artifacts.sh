@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Local helper to export the two offline demo prerequisites:
-#   1. quakestrikeph-app.tar.gz       (tracked app source + model-artifacts + images.tar)
-#   2. quakestrikeph-db-backup.sql.gz (earthquake/model/forecast data only, no user data)
+#   1. quakestrikeph-app.tar.gz       (tracked app source + images.tar, without workers)
+#   2. quakestrikeph-db-backup.sql.gz (full schema + earthquake/model/forecast data only, no user data)
 #
 # Authors: Armenta, Buergo, Candelaria, Pispis
 # Usage: bash tools/prepare-demo-artifacts.sh --app-repo PATH --output-dir PATH [--db-url URL | --compose-project NAME]
@@ -78,15 +78,10 @@ then
     fail "use --app-repo to point to your QuakeStrikePH Git checkout."
 fi
 
-if [ ! -d "$app_repo/model-artifacts" ]
-then
-    fail "$app_repo/model-artifacts is missing. Prepare model artifacts first."
-fi
-
 mkdir -p "$output_dir" || fail "could not create $output_dir."
 output_dir=$(cd "$output_dir" && pwd)
 
-# 1. Build and package quakestrikeph-app.tar.gz
+# 1. Build and package quakestrikeph-app.tar.gz (web + DB images only, no workers)
 echo "Building local Docker images from $app_repo..."
 (
     cd "$app_repo" || exit 1
@@ -94,7 +89,7 @@ echo "Building local Docker images from $app_repo..."
         -f infrastructure/compose.yml \
         -f infrastructure/compose.backend.yml \
         -f infrastructure/compose.local.yml \
-        build local-init backend-api bulletin || exit 1
+        build backend-api bulletin || exit 1
 
     docker compose --env-file .env \
         -f infrastructure/compose.yml \
@@ -104,15 +99,13 @@ echo "Building local Docker images from $app_repo..."
 bundle_dir=$(mktemp -d) || fail "could not create temporary bundle directory."
 trap 'rm -rf -- "$bundle_dir"' EXIT
 
-echo "Exporting tracked source files and model-artifacts..."
+echo "Exporting tracked source files..."
 git -C "$app_repo" archive --format=tar HEAD | tar -xf - -C "$bundle_dir" || fail "could not export Git archive."
-cp -a "$app_repo/model-artifacts" "$bundle_dir/model-artifacts" || fail "could not copy model-artifacts."
 
 echo "Saving Docker images to images.tar..."
 docker image save --output "$bundle_dir/images.tar" \
     postgres:16.15-bookworm \
     redis:7.4.11-bookworm \
-    quakestrike-workers:local \
     quakestrike-backend:local \
     quakestrike-bulletin:local \
     || fail "could not save Docker images."
@@ -122,15 +115,12 @@ echo "Creating $app_archive..."
 tar -czf "$app_archive" -C "$bundle_dir" . || fail "could not create $app_archive."
 tar -tzf "$app_archive" > /dev/null || fail "created archive failed integrity check."
 
-# 2. Export earthquake/model/forecast database backup (excluding user/account/alert data)
+# 2. Export full schema + earthquake/model/forecast data (excluding user/account/alert rows)
 dump_flags=(
-    --data-only
     --inserts
     --on-conflict-do-nothing
     --no-owner
     --no-privileges
-    --exclude-table-data='*alembic*'
-    --exclude-table-data='*migration*'
     --exclude-table-data='*user*'
     --exclude-table-data='*account*'
     --exclude-table-data='*alert*'
