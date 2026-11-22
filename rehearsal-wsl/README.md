@@ -3,7 +3,7 @@
 These systemd files are environment preparation for the test distributions.
 The instructions below describe the existing `QuakeStrikePH-Rehearsal` setup.
 For `QuakeStrikePH-FreshTest`, use the
-[manual fresh test guide](../TESTING.md#manual-test-from-a-fresh-import).
+[manual fresh test guide](../TESTING-NOTES.md#manual-test-from-a-fresh-import).
 Do not install these settings in the working `QuakeStrikePH-Checkoff1` demo.
 
 ## Current rehearsal files
@@ -12,7 +12,7 @@ The rehearsal's `/root` was tidied on 18 November 2026 without deleting files:
 
 ```text
 /root/
-  rehearsal-toolkit/                        Active scripts, menu, tests, and manuals
+  rehearsal-toolkit/                        Active scripts, tests, and manuals
   rehearsal.env                            Active private rehearsal configuration
   quakestrikeph-with-prediction.tar.gz       Complete offline application archive
   quakestrikeph-with-prediction.tar.gz.sha256
@@ -27,11 +27,10 @@ script copies in `scripts/`, five completed test logs in `logs/`, and the older
 were moved, not deleted. `/root` now has six visible entries instead of seventeen.
 
 Run the six scripts from `/root/rehearsal-toolkit`, where they stay together for
-the rebuild coordinator. The presentation menu command is unchanged. Tests, the
-manual, and WSL setup files retain their existing relative locations. Checks after
-the move passed script syntax/help, test syntax, manual rendering, and menu exit;
-no installation, seeding, or removal was run for this cleanup. Preserved inputs
-and moved files were checked for unchanged contents, permissions, and ownership.
+the rebuild coordinator. Tests, the manual, and WSL setup files retain their
+existing relative locations. Checks after the move passed script syntax/help,
+test syntax, and manual rendering. Preserved inputs and moved files were checked
+for unchanged contents, permissions, and ownership.
 
 Both distributions share WSL's host network. Different published web ports alone
 would still leave two Docker engines managing the same network interfaces and

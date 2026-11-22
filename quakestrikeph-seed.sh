@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# Import the team's sanitized demo fixture and verify a completed forecast.
+# Load sanitized test data and verify a saved forecast
 # Authors: Armenta, Buergo, Candelaria, Pispis
 # Usage: sudo bash quakestrikeph-seed.sh --directory /srv/quakestrikeph
-# Run after installation and final permissions. Use --help for options.
+# Run after installation and final permissions
 # AI assistance: ChatGPT helped implement and test this script.
 # Adapted from QuakeStrikePH docs/operations/local-runtime.md, sections 6-7
 # and the prediction operations query. The group must understand every step.
@@ -74,7 +74,7 @@ then
     exit 1
 fi
 
-# Restrict this course demo to the exact reviewed test fixture, never live records.
+# Use only the reviewed fixture para sa demo
 snapshot_file="$app_directory/workers/tests/fixtures/bootstrap/historical_snapshot.json"
 if ! snapshot_hash=$(sha256sum -- "$snapshot_file") ||
    [ "${snapshot_hash%% *}" != "9fdf3c0e0b0abd8dfa7148539c77ac369f93d679cf4488befae160dc86db5f19" ]
@@ -85,7 +85,7 @@ fi
 
 compose()
 {
-    # Ignore exported application settings so --env-file supplies the credentials.
+    # Clear inherited settings para Compose uses the private configuration
     env -i PATH="$PATH" HOME="$HOME" DOCKER_HOST=unix:///var/run/docker.sock \
     WORKER_IMAGE_TAG=local \
     BOOTSTRAP_RUN_MANIFEST=/app/workers/bootstrap-snapshots/bootstrap-readiness.json \
@@ -97,15 +97,17 @@ compose()
         -f "$app_directory/infrastructure/compose.checkoff.yml" "$@"
 }
 
+# Check the prediction setup muna before importing data
 if ! compose --profile prediction config --quiet
 then
     echo "Seed failed: the Compose configuration is invalid."
     exit 1
 fi
 
-# Bootstrap reuses its persisted run on repeat execution and rejects conflicting evidence.
-# The fixture deliberately contains four rejected rows; these diagnostics are expected.
+# Reuse saved import evidence kapag matching ang fixture
+# Expect four rejected rows sa test fixture
 echo "Importing the sanitized demo fixture (four rejected rows are expected)..."
+# Mount the fixture read only para safe ang test data
 if ! compose run --rm --no-deps --pull never \
     --volume "$snapshot_file:/demo/input.json:ro" \
     release-init quakestrike bootstrap --snapshot /demo/input.json \
@@ -115,6 +117,7 @@ then
     exit 1
 fi
 
+# Check database and model readiness muna before starting the workers
 if ! compose run --rm --no-deps --pull never release-init quakestrike startup-check
 then
     echo "Seed failed: startup readiness did not pass."
@@ -128,7 +131,8 @@ then
     exit 1
 fi
 
-# A healthy worker is not proof of a completed forecast. Check its saved result.
+# Verify the saved forecast sa database after the workers start
+# Match the forecast sa demo event with a successful job
 forecast_query="
     SELECT COUNT(*)
     FROM forecasts f
@@ -137,6 +141,7 @@ forecast_query="
     WHERE p.status = 'succeeded'
       AND r.location_description = 'Sanitized prediction anchor';
 "
+# Poll PostgreSQL para may time for the forecast job to finish
 echo "Waiting up to five minutes for the demo forecast..."
 for ((attempt = 0; attempt < 60; attempt++))
 do

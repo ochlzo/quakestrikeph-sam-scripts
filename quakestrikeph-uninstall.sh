@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# Remove only the dedicated local course deployment. Preview is the default.
+# Remove only the dedicated course deployment
 # Authors: Armenta, Buergo, Candelaria, Pispis
 # Usage: sudo bash quakestrikeph-uninstall.sh --directory /srv/quakestrikeph
-# This previews removal; --confirm enables deletion. Use --help for details.
+# Preview removal first and delete only after confirmation
 # AI assistance: ChatGPT helped implement and test this script.
 # Sources: application Compose files and Docker's container/volume removal docs:
 # https://docs.docker.com/reference/cli/docker/container/rm/
@@ -60,14 +60,14 @@ do
     command -v "$required_command" > /dev/null || fail "$required_command is required."
 done
 
-# Use the course server's local engine even if a shell has another context selected.
+# Use the local Docker engine para sa course deployment
 docker_local()
 {
     DOCKER_CONTEXT= DOCKER_HOST= DOCKER_TLS= DOCKER_TLS_VERIFY= \
         docker --host unix:///var/run/docker.sock "$@"
 }
 
-# Validate every target before stopping a service or deleting anything.
+# Check removal targets muna
 [[ "$app_directory" =~ ^/srv/[a-zA-Z0-9._-]+$ ]] || fail "choose a dedicated /srv/NAME directory."
 [ "$(realpath -m -- "$app_directory")" = "$app_directory" ] || fail "do not use dot segments or symlink paths."
 [ ! -L "$app_directory" ] || fail "the application directory must not be a symlink."
@@ -91,6 +91,7 @@ then
     [ -z "$first_entry" ] || fail "nonempty directory is not a recognized course installation."
 fi
 
+# Find resources gamit ang Compose project label
 docker_local info > /dev/null || fail "local Docker is unavailable; nothing was removed."
 containers=$(docker_local ps -aq --filter "label=com.docker.compose.project=$project") || fail "could not list containers."
 volumes=$(docker_local volume ls -q --filter "label=com.docker.compose.project=$project") || fail "could not list volumes."
@@ -100,6 +101,7 @@ then
     fail "project resources exist but this directory is not recognized; restore the install files for inspection."
 fi
 
+# Check the working directory muna because deployments can share a project label
 for container in $containers
 do
     [[ "$container" =~ ^[0-9a-f]{12,64}$ ]] || fail "unexpected container identifier."
@@ -145,6 +147,7 @@ echo "Removal target: $app_directory and Compose project $project"
 printf 'Containers: %s\nVolumes: %s\nNetworks: %s\n' "${containers:-none}" "${volumes:-none}" "${networks:-none}"
 echo "Service account/group: $service_user, if present."
 echo "The installed .env, bootstrap evidence, and database records will be lost."
+# Require confirmation muna before removing any resources
 if [ "$confirmed" != true ]
 then
     echo "Preview only: nothing removed. Use --confirm only when deletion is intended."
@@ -154,12 +157,12 @@ fi
 for container in $containers
 do
     docker_local stop "$container" || fail "could not stop $container; cleanup stopped."
-    # --volumes removes anonymous container storage; named data volumes are handled below.
+    # Remove anonymous volumes kasama ang container
     docker_local rm --volumes "$container" || fail "could not remove $container; cleanup stopped."
 done
 for volume in $volumes
 do
-    # No force: Docker must refuse a volume still referenced by another container.
+    # Keep the volume kapag another container still uses it
     docker_local volume rm "$volume" || fail "could not remove $volume; install files and account retained."
 done
 for network in $networks
@@ -169,11 +172,12 @@ done
 
 if [ -d "$app_directory" ]
 then
+    # Limit deletion sa installation filesystem
     rm -rf --one-file-system --preserve-root=all -- "$app_directory" || fail "could not remove the installation directory."
 fi
 if getent passwd "$service_user" > /dev/null
 then
-    # No --force or --remove: do not kill unrelated processes or traverse a home directory.
+    # Protect unrelated processes pati user home directories
     userdel "$service_user" || fail "could not remove service user; inspect remaining processes and retry."
 fi
 if getent group "$service_user" > /dev/null
@@ -181,6 +185,7 @@ then
     groupdel "$service_user" || fail "could not remove service group; inspect other memberships."
 fi
 
+# Verify cleanup pagkatapos ng uninstall
 containers=$(docker_local ps -aq --filter "label=com.docker.compose.project=$project") || fail "could not verify containers."
 volumes=$(docker_local volume ls -q --filter "label=com.docker.compose.project=$project") || fail "could not verify volumes."
 networks=$(docker_local network ls -q --filter "label=com.docker.compose.project=$project") || fail "could not verify networks."

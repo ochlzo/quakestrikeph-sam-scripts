@@ -35,7 +35,7 @@ Installation supports Ubuntu 24.04 LTS and Debian 13 with systemd;
 course approval and execution testing are separate from distribution support.
 .PP
 Before an offline deployment, prepare the distribution's cached APT packages
-and the trusted application archive as described in TESTING.md.
+and the trusted application archive as described in TESTING-NOTES.md.
 The archive must include source files, model artifacts,
 images.tar, and prediction-image.tar at its root.
 Keep credentials and existing bootstrap evidence out of the archive.
@@ -122,7 +122,7 @@ Stops on the first failure. Never calls uninstall or resets database volumes.
 Use a separate disposable server for a fresh rebuild test.
 .SH EXAMPLES
 Run these commands from the toolkit directory in Bash.
-Prepare inputs using TESTING.md first; these are real deployment commands.
+Prepare inputs using TESTING-NOTES.md first; these are real deployment commands.
 .PP
 Run the individual deployment stages in order:
 .nf
@@ -154,7 +154,7 @@ preserved external credentials. Docker and cached images were retained as design
 The separate WSL testing environment completed the real rebuild after correcting its
 runtime network/mount setup, without deleting volumes or changing credentials.
 A complete repeat run also preserved the records, forecast ID, and credentials.
-See TESTING.md for the isolated testing network and host ports 14321/13000.
+See TESTING-NOTES.md for the isolated testing network and host ports 14321/13000.
 An uninterrupted first attempt on another fresh import remains unverified.
 .PP
 Read help or this manual without running a deployment:

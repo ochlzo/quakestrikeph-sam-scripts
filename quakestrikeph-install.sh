@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# This is the installation script for running the quakestrikeph system
+# Install QuakeStrikePH on the course server
 # Authors: Armenta, Buergo, Candelaria, Pispis
 # Usage: bash quakestrikeph-install.sh --help
 # AI assistance: ChatGPT explained Bash syntax and completed this script
@@ -78,14 +78,14 @@ do
     fi
 done
 
-#check if may root access
+# Check if may root access
 if [ "$EUID" -ne 0 ]
 then
     echo "Run this script with root privileges."
     exit 1
 fi
 
-#check the tools before changing the system
+# Check the required tools muna before changing the server
 for required_command in apt-get systemctl realpath tar mktemp stat grep cp chmod install cmp find findmnt env
 do
     if ! command -v "$required_command" > /dev/null
@@ -107,6 +107,7 @@ then
     exit 1
 fi
 
+# Choose Docker packages ayon sa Linux release
 if [ "$ID" = "ubuntu" ] && [ "$VERSION_ID" = "24.04" ]
 then
     docker_packages=(docker.io docker-compose-v2)
@@ -137,7 +138,7 @@ then
     exit 1
 fi
 
-# Match the accounts script's guards before packages, services, or files change.
+# Check the destination muna before changing the server
 [[ "$app_directory" =~ ^/srv/[a-zA-Z0-9._-]+$ ]] || fail "choose a dedicated /srv/NAME directory."
 [ "$(realpath -m -- "$app_directory")" = "$app_directory" ] || fail "do not use dot segments or symlink paths."
 [ ! -L "$app_directory" ] || fail "the application directory must not be a symlink."
@@ -166,7 +167,7 @@ then
     [ -z "$linked_file" ] || fail "review linked file before proceeding: $linked_file"
 fi
 
-#avoid changing database passwords during a repeated installation
+# Keep existing database credentials kapag reinstalling
 if [ -f "$app_directory/.env" ] && ! cmp -s -- "$config_file" "$app_directory/.env"
 then
     echo "Installation failed: this directory already has a different configuration."
@@ -174,7 +175,7 @@ then
     exit 1
 fi
 
-#keep credentials in the separate private file instead of sourcing it as Bash
+# Read credentials as data lang from the private configuration
 for setting in POSTGRES_PASSWORD MIGRATION_DB_PASSWORD WORKER_DB_PASSWORD BACKEND_DB_PASSWORD MODEL_RELEASE_ID BACKEND_IMAGE_TAG PHIVOLCS_CATALOG_URL BOOTSTRAP_REQUIRED_AVAILABLE_THROUGH
 do
     if ! grep -Eq "^${setting}=.+" "$config_file"
@@ -200,7 +201,7 @@ then
     exit 1
 fi
 
-#unpack and check the offline files before installing packages
+# Check the offline archive muna before installing packages
 if ! staging_directory=$(mktemp -d /tmp/quakestrikeph-install.XXXXXX)
 then
     echo "Installation failed: could not create a temporary directory."
@@ -208,6 +209,7 @@ then
 fi
 trap 'rm -rf -- "$staging_directory"' EXIT
 
+# Use local ownership and permission defaults muna
 if ! tar --extract --gzip --file "$app_archive" --directory "$staging_directory" --no-same-owner --no-same-permissions
 then
     echo "Installation failed: could not extract the application archive."
@@ -232,15 +234,15 @@ then
     exit 1
 fi
 
-# Runtime evidence belongs to this database and must never be replaced by a bundle.
+# Keep saved evidence sa deployment that owns the database
 if [ -e "$staging_directory/bootstrap-snapshots" ]
 then
     echo "Installation failed: keep bootstrap-snapshots/ out of the application archive."
     exit 1
 fi
 
-# Adapted from the application's release Compose mounts. Relative host paths also
-# support --directory; the container path preserves the earlier manual import.
+# Adapted from the application release Compose mounts para sa offline demo
+# Use relative paths para custom install directories work
 if ! cat > "$staging_directory/infrastructure/compose.checkoff.yml" <<'YAML'
 # AI-assisted course override; application service definitions remain upstream.
 services:
@@ -263,8 +265,8 @@ then
     exit 1
 fi
 
-#install the downloaded docker package
-# Image loading and Compose must use the same native local engine.
+# Use cached Docker packages para offline ang install
+# Use the same local Docker engine para sa images and Compose
 export DOCKER_HOST=unix:///var/run/docker.sock
 unset DOCKER_CONTEXT DOCKER_TLS_VERIFY DOCKER_CERT_PATH DOCKER_TLS
 
@@ -275,7 +277,7 @@ then
     exit 1
 fi
 
-#start Docker now and enable it at boot
+# Start Docker and enable it para ready at boot
 if ! systemctl enable --now docker
 then
     echo "Installation failed: could not enable and start Docker."
@@ -294,7 +296,7 @@ then
     exit 1
 fi
 
-#load the prepared images so Compose can start without downloading or building
+# Load prepared images para offline ang startup
 echo "Loading the prepared Docker images..."
 for image_archive in images.tar prediction-image.tar
 do
@@ -305,14 +307,14 @@ do
     fi
 done
 
-#the source archive remains available for the next rebuild
+# Keep the source archive para sa next rebuild
 if ! rm -- "$staging_directory/images.tar" "$staging_directory/prediction-image.tar"
 then
     echo "Installation failed: could not remove the temporary image archive."
     exit 1
 fi
 
-#copy root-owned application files with readable code and a private configuration
+# Copy app files and keep settings private para safe ang credentials
 if ! chmod -R u=rwX,go=rX "$staging_directory" ||
    ! install -d -o root -g root -m 755 -- "$app_directory" ||
    ! cp -a -- "$staging_directory/." "$app_directory/"
@@ -336,19 +338,19 @@ then
     exit 1
 fi
 
-# The existing worker image runs as UID/GID 10001 and writes bootstrap evidence.
+# Match evidence ownership para the worker can write there
 if ! install -d -o 10001 -g 10001 -m 700 -- "$app_directory/bootstrap-snapshots"
 then
     echo "Installation failed: could not prepare the private bootstrap evidence directory."
     exit 1
 fi
 
-#reuse the same Compose options for every step; "$@" passes the function arguments
-#the separate project name keeps this course demo's volumes together
+# Reuse Compose settings habang passing through the function arguments
+# Keep course volumes sa dedicated Compose project
 compose()
 {
-    # Compose gives shell variables precedence over --env-file. Start with only
-    # tool lookup, Docker's home, and the fixed local demo settings.
+    # Clear inherited settings para Compose reads the private configuration
+    # Keep only the environment values para sa local Docker
     env -i PATH="$PATH" HOME="$HOME" DOCKER_HOST=unix:///var/run/docker.sock \
     WORKER_IMAGE_TAG=local \
     BOOTSTRAP_RUN_MANIFEST=/app/workers/bootstrap-snapshots/bootstrap-readiness.json \
@@ -366,6 +368,7 @@ then
     exit 1
 fi
 
+# Check required images muna before stopping services
 if ! required_images=$(compose --profile init --profile prediction config --images)
 then
     echo "Installation failed: could not read the required image names."
@@ -381,7 +384,7 @@ do
     fi
 done
 
-# Stop consumers as well as web services before repeating database setup.
+# Stop workers and web services muna before database setup
 if ! compose --profile prediction --profile beat --profile alerts stop \
     beat data-ingestor dispatcher prediction-worker alert-worker alert-reconciliation backend-api bulletin
 then
@@ -389,6 +392,7 @@ then
     exit 1
 fi
 
+# Wait for healthy PostgreSQL and Redis services muna
 echo "Starting PostgreSQL and Redis..."
 if ! compose up -d --no-build --pull never --wait --wait-timeout 120 postgres redis
 then
@@ -396,7 +400,7 @@ then
     exit 1
 fi
 
-#reuse the application's role provisioning and migration commands
+# Reuse application commands para sa database roles and migrations
 if ! compose exec -T postgres sh /opt/quakestrike/provision-roles.sh create
 then
     echo "Installation failed: could not create the migration and worker database users."
@@ -409,6 +413,7 @@ then
     exit 1
 fi
 
+# Grant worker access pagkatapos ng migrations
 if ! compose exec -T postgres sh /opt/quakestrike/provision-roles.sh grant-worker
 then
     echo "Installation failed: could not grant the worker database permissions."
@@ -435,7 +440,7 @@ then
     exit 1
 fi
 
-#check real HTTP responses using Node, which is already in both web images
+# Check HTTP responses gamit ang Node inside both web containers
 if ! compose exec -T backend-api node -e "fetch('http://127.0.0.1:3000/healthz').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))" ||
    ! compose exec -T bulletin node -e "fetch('http://127.0.0.1:4321/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
 then
@@ -443,7 +448,7 @@ then
     exit 1
 fi
 
-# Reuse existing data and evidence on repeat installs; never create a new backfill here.
+# Keep existing records and evidence kapag reinstalling
 if [ -f "$app_directory/bootstrap-snapshots/bootstrap-readiness.json" ]
 then
     if ! compose run --rm --no-deps --pull never release-init quakestrike startup-check ||

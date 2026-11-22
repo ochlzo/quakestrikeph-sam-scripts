@@ -42,9 +42,12 @@ docker --host unix:///var/run/docker.sock ps --filter label=com.docker.compose.p
 **Expected output** Six containers showing `(healthy)` under `STATUS`.
 If you see `health: starting`, wait a moment and repeat Command 3.
 
-**Stop after Command 3.** Once all six containers are healthy, open the
-[FreshTest website](http://127.0.0.1:24321) in your Windows browser and select
-**Sanitized prediction anchor**.
+**The restart check ends after Command 3.** Once all six containers are healthy,
+open the [FreshTest website](http://127.0.0.1:24321) in your Windows browser and
+select **Sanitized prediction anchor**.
+
+When you want to rebuild or demonstrate all six scripts, use
+[Script 1 in TESTING.md](TESTING.md#script-1-full-rebuild).
 
 For a brand-new FreshTest, use the
-[first-time setup in TESTING.md](TESTING.md#manual-test-from-a-fresh-import).
+[first-time setup in TESTING-NOTES.md](TESTING-NOTES.md#manual-test-from-a-fresh-import).

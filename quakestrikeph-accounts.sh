@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# Create the dedicated host identity and protect the demo application's files.
+# Create the service account and protect the application files
 # Authors: Armenta, Buergo, Candelaria, Pispis
 # Usage: sudo bash quakestrikeph-accounts.sh --directory /srv/quakestrikeph
-# Run before installation and again afterward. Use --help for options.
+# Run before and after installation
 # AI assistance: ChatGPT helped implement and verify this script.
-# UID/GID 10001 match the application's workers/Dockerfile.
+# Match the user and group IDs to the worker image
 
 app_directory="/srv/quakestrikeph"
 service_user="quakestrikeph"
@@ -53,12 +53,14 @@ do
 done
 [ -x /usr/sbin/nologin ] || fail "/usr/sbin/nologin is required."
 
-# Avoid recursively changing a parent directory, a Windows checkout, or linked files.
+# Check the target path muna to protect files outside the installation
+
 [[ "$app_directory" =~ ^/srv/[a-zA-Z0-9._-]+$ ]] || fail "choose a dedicated /srv/NAME directory."
 [ "$(realpath -m -- "$app_directory")" = "$app_directory" ] || fail "do not use dot segments or symlink paths."
 [ ! -L "$app_directory" ] || fail "the application directory must not be a symlink."
 [ ! -e "$app_directory" ] || [ -d "$app_directory" ] || fail "the target is not a directory."
 
+# Check mounts muna so permission changes stay inside the installation
 mounted_paths=$(findmnt -rn -o TARGET) || fail "could not inspect mounted filesystems."
 while IFS= read -r mounted_path
 do
@@ -76,12 +78,14 @@ then
         [ -f "$app_directory/apps/quakestrikeph-bulletin/package.json" ] ||
             fail "nonempty directory is not an installation from the updated installer."
     fi
+    # Block links muna to protect shared files
     linked_file=$(find "$app_directory" -xdev \( -type l -o \( -type f -links +1 \) \) -print -quit) ||
         fail "could not inspect links."
     [ -z "$linked_file" ] || fail "review linked file before proceeding: $linked_file"
 fi
 
-# Validate all existing identities before creating anything. Never take over a UID.
+# Verify existing accounts muna to avoid taking over an ID
+
 if group_record=$(getent group "$service_group")
 then
     IFS=: read -r group_name group_password group_id group_members <<< "$group_record"
@@ -108,6 +112,7 @@ then
     fail "UID $service_id belongs to another user."
 fi
 
+# Reuse matching identities kapag present
 if ! getent group "$service_group" > /dev/null
 then
     groupadd --gid "$service_id" "$service_group" || fail "could not create the service group."
@@ -121,9 +126,10 @@ fi
 
 install -d -o root -g "$service_group" -m 750 -- "$app_directory" || fail "could not prepare the application directory."
 
-# Keep code immutable to the worker. Windows archives can mark every file executable,
-# so only directories and shell scripts receive execute permission.
-# The two private paths get their own ownership and permissions below.
+# Keep application code read only para sa workers
+# Windows archives can mark pati ordinary files as executable
+# Give execute permission only sa directories and shell scripts
+
 find "$app_directory" -xdev \
     \( -path "$app_directory/.env" -o -path "$app_directory/bootstrap-snapshots" \) -prune -o \
     \( -type d -o -type f \) -exec chown root:"$service_group" {} + || fail "could not set code ownership."
@@ -137,11 +143,13 @@ find "$app_directory" -xdev \
     \( -path "$app_directory/.env" -o -path "$app_directory/bootstrap-snapshots" \) -prune -o \
     -type f -name '*.sh' -exec chmod 750 {} + || fail "could not protect shell scripts."
 
+# Restrict the environment file to root para safe ang credentials
 if [ -f "$app_directory/.env" ]
 then
     chown root:root "$app_directory/.env" && chmod 600 "$app_directory/.env" || fail "could not protect .env."
 fi
 
+# Let the worker save readiness data sa evidence directory
 if [ -f "$app_directory/infrastructure/compose.checkoff.yml" ]
 then
     evidence_directory="$app_directory/bootstrap-snapshots"

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Coordinate the prepared offline deployment and verify the finished demo.
+# Run the offline deployment and check the finished demo
 # Authors: Armenta, Buergo, Candelaria, Pispis
 # Usage: bash quakestrikeph-rebuild.sh --help
 # AI assistance: ChatGPT helped implement and test this script.
@@ -65,7 +65,9 @@ do
     command -v "$required_command" > /dev/null || fail "$required_command is required."
 done
 
-# Reject missing inputs and unsafe paths before any child script changes the server.
+
+# Check for missing inputs and unsafe paths muna
+
 [ -f "$app_archive" ] && [ -r "$app_archive" ] || fail "use --archive to supply a readable application archive."
 app_archive=$(realpath -e -- "$app_archive") || fail "could not resolve archive path."
 [[ "$app_directory" =~ ^/srv/[a-zA-Z0-9._-]+$ ]] || fail "choose a dedicated /srv/NAME directory."
@@ -76,26 +78,30 @@ config_file=$(realpath -m -- "$config_file") || fail "could not resolve configur
 [ -d "$(dirname -- "$config_file")" ] || fail "create the private configuration directory first."
 script_path=$(realpath -e -- "$0") || fail "could not locate this script."
 script_directory=$(dirname -- "$script_path")
+# Keep rebuild inputs outside the install directory para safe during redeployment
 for input_path in "$app_archive" "$config_file" "$script_directory"
 do
     case "$input_path" in
         "$app_directory"|"$app_directory"/*) fail "keep the archive, configuration, and toolkit outside the installation directory." ;;
     esac
 done
+# Check companion scripts muna before changing the server
 for script in quakestrikeph-accounts.sh quakestrikeph-config.sh quakestrikeph-install.sh quakestrikeph-seed.sh
 do
     [ -f "$script_directory/$script" ] && [ -r "$script_directory/$script" ] || fail "missing toolkit script: $script"
     bash -n "$script_directory/$script" || fail "syntax error in $script"
 done
 
-# Show space for archive extraction, application files, and default Docker storage.
+# Show free space para sa extraction application files and Docker
 echo "Disk space before rebuild (/tmp, /srv, /var/lib):"
 df -h -- /tmp /srv /var/lib || fail "could not check available disk space."
 
+# Check the archive muna for damage
 tar -tzf "$app_archive" > /dev/null || fail "the application archive is not readable as a complete tar.gz."
 
-# Catch credential conflicts before even the first permissions pass. The config
-# script performs the full validation and safely reuses a missing external copy.
+# Check for credential conflicts muna before changing permissions
+
+# The config script reuses installed settings kapag missing ang external copy
 if [ -e "$app_directory/.env" ] || [ -L "$app_directory/.env" ]
 then
     [ -f "$app_directory/.env" ] && [ ! -L "$app_directory/.env" ] || fail "installed configuration must be a regular file."
@@ -108,10 +114,11 @@ then
     fail "installation exists but its .env is missing; recover the original credentials first."
 fi
 
-# All stages must reach the same native engine, even if a remote context is selected.
+# Use one local Docker engine para consistent ang rebuild
 export DOCKER_HOST=unix:///var/run/docker.sock
 unset DOCKER_CONTEXT DOCKER_TLS_VERIFY DOCKER_CERT_PATH DOCKER_TLS
 
+# Prepare the account and configuration muna for installation
 echo "Step 1/6: prepare the service account and directory..."
 bash "$script_directory/quakestrikeph-accounts.sh" --directory "$app_directory" || fail "initial accounts setup failed."
 
@@ -121,7 +128,7 @@ bash "$script_directory/quakestrikeph-config.sh" --output "$config_file" --direc
 echo "Step 3/6: install the prepared release..."
 bash "$script_directory/quakestrikeph-install.sh" --archive "$app_archive" --config "$config_file" --directory "$app_directory" || fail "installation failed."
 
-# Installation applies initial permissions while copying the release.
+# Reapply permissions pagkatapos ng installation to cover copied files
 echo "Step 4/6: apply final permissions..."
 bash "$script_directory/quakestrikeph-accounts.sh" --directory "$app_directory" || fail "final permissions failed."
 
@@ -129,8 +136,9 @@ echo "Step 5/6: seed test records and verify the saved forecast..."
 bash "$script_directory/quakestrikeph-seed.sh" --directory "$app_directory" || fail "seed or saved forecast verification failed."
 
 compose()
-{
-    # Use the same isolated Compose environment as installation and seeding.
+{   
+  
+    # Reuse the same Compose settings para sa final checks
     env -i PATH="$PATH" HOME="$HOME" DOCKER_HOST=unix:///var/run/docker.sock \
     WORKER_IMAGE_TAG=local \
     BOOTSTRAP_RUN_MANIFEST=/app/workers/bootstrap-snapshots/bootstrap-readiness.json \
@@ -142,7 +150,9 @@ compose()
         -f "$app_directory/infrastructure/compose.checkoff.yml" "$@"
 }
 
-# Recheck HTTP after seeding; the seed script has already checked the saved forecast.
+# Check both web services bago reporting success
+# The saved forecast is already verified sa seed stage
+# Check URLs inside the containers para independent of Windows port forwarding
 echo "Step 6/6: verify the Backend and Bulletin responses..."
 compose exec -T backend-api node -e "fetch('http://127.0.0.1:3000/healthz', {signal: AbortSignal.timeout(10000)}).then(r => process.exit(r.ok ? 0 : 1)).catch(error => { console.error(error.message); process.exit(1); })" || fail "Backend HTTP check failed."
 compose exec -T bulletin node -e "fetch('http://127.0.0.1:4321/', {signal: AbortSignal.timeout(10000)}).then(r => process.exit(r.ok ? 0 : 1)).catch(error => { console.error(error.message); process.exit(1); })" || fail "Bulletin HTTP check failed."

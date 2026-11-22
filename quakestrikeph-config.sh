@@ -1,14 +1,14 @@
 #!/bin/bash
 
-# Prepare private configuration for the reviewed SEIS 1.0.1 course demo.
+# Prepare private settings for the course demo
 # Authors: Armenta, Buergo, Candelaria, Pispis
 # Usage: sudo bash quakestrikeph-config.sh --output /root/demo.env --directory /srv/quakestrikeph
-# Run before installation. Use --help for options and credential-reuse behavior.
+# Run before installation and reuse matching credentials
 # AI assistance: ChatGPT helped implement and test this script.
 # Settings adapted from the application's .env.example, local-runtime guide,
 # and workers/tests/fixtures/bootstrap/historical_snapshot.json.
 
-# Password assignments must not appear even if this script is invoked with bash -x.
+# Hide passwords kahit may Bash tracing
 set +x
 output_file="/root/demo.env"
 app_directory="/srv/quakestrikeph"
@@ -53,11 +53,12 @@ do
     command -v "$required_command" > /dev/null || fail "$required_command is required."
 done
 
-# Read plain KEY=value entries as data, never execute the configuration as Bash.
+# Read the configuration as data lang to avoid executing it
 read_setting()
 {
     local config_file="$1" setting_name="$2" entry
     entry=$(grep -E "^$setting_name=" "$config_file") || fail "missing $setting_name; file unchanged."
+    # Stop kapag duplicate ang key
     [[ "$entry" != *$'\n'* ]] || fail "duplicate $setting_name; file unchanged."
     [ -n "${entry#*=}" ] || fail "$setting_name is empty; file unchanged."
     printf '%s' "${entry#*=}"
@@ -123,6 +124,7 @@ then
     if [ -e "$installed_config" ] || [ -L "$installed_config" ]
     then
         check_config "$installed_config" || exit 1
+        # Compare both files muna to protect installed credentials
         cmp -s -- "$output_file" "$installed_config" || fail "output differs from the installed .env; both files unchanged."
     fi
     echo "Configuration ready: existing file kept unchanged."
@@ -135,6 +137,7 @@ output_parent=$(dirname -- "$output_file")
 parent_mode=$(stat -c '%a' "$output_parent") || fail "could not check output directory."
 (( (8#$parent_mode & 0022) == 0 )) || fail "output directory must not be writable by group or others."
 
+# Reuse installed settings kapag missing ang external copy
 reuse_installed=false
 if [ -e "$installed_config" ] || [ -L "$installed_config" ]
 then
@@ -145,8 +148,10 @@ then
     fail "installation exists but its .env is missing; recover the original credentials first."
 fi
 
+# Set private permissions muna for the temporary file
 umask 077
 temporary_file=$(mktemp "$output_parent/.quakestrikeph-config.XXXXXX") || fail "could not create private temporary file."
+# Clean up the temporary file kahit may error
 trap 'rm -f -- "$temporary_file"' EXIT
 
 if [ "$reuse_installed" = true ]
@@ -193,7 +198,7 @@ fi
 
 chown root:root "$temporary_file" || fail "could not set private file ownership."
 check_config "$temporary_file" || exit 1
-# Hard-link publication fails if output appeared meanwhile; it never overwrites it.
+# Use a hard link para existing output files stay intact
 ln -- "$temporary_file" "$output_file" || fail "could not create output; an existing file was not overwritten."
 rm -- "$temporary_file" || fail "configuration saved but temporary file cleanup failed."
 trap - EXIT

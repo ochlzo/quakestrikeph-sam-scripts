@@ -358,31 +358,17 @@ The same order applies when running the scripts individually.
 
 ## Full rebuild
 
+`quakestrikeph-rebuild.sh` is the main rebuild command. Run it as root from the
+prepared Linux toolkit with the offline archive and private config path. The
+[Script 1 command for FreshTest](TESTING.md#script-1-full-rebuild) starts the
+timed rebuild and verifies the app.
+
 ### Short presentation flow
 
-For the [manual fresh test](TESTING.md#manual-test-from-a-fresh-import), prepare
-`QuakeStrikePH-FreshTest` and run the six course scripts directly from its
-toolkit. The existing rehearsal menu is available for separate practice.
+For the [manual fresh test](TESTING-NOTES.md#manual-test-from-a-fresh-import),
+prepare `QuakeStrikePH-FreshTest` and run each script directly from the
+[six-script walkthrough](TESTING.md).
 
-To avoid typing the paths and network setup for each command, open the rehearsal
-menu from PowerShell:
-
-```powershell
-wsl -d QuakeStrikePH-Rehearsal -u root -- bash /root/rehearsal-toolkit/presentation-menu.sh
-```
-
-Select one numbered script at a time. The helper supplies the archive/configuration
-paths, enters the existing private network, and shows the original script output
-and exit status. It refuses other distributions and exits if an action fails.
-Installation also runs the required final accounts/permissions pass. Uninstall
-first previews its targets and requires typing `REMOVE` before deletion.
-`0` exits. This is a presentation helper, not a seventh course script or a change
-to the six scripts' behavior. It reduces typing; installation runtime is unchanged.
-Menu verification covered all choices/arguments, installation's permissions pass,
-uninstall cancellation/confirmation, failure stops, and distribution/network guards
-using command substitutes. The installed menu also passed a real uninstall preview
-followed by cancellation. No installation or confirmed removal ran during these
-helper checks; the earlier lifecycle tests exercised the underlying scripts.
 The faculty guide (Sections 3.4 and 7.2) requires starting the full rebuild on a
 blank VM at the beginning of the slot. The slot is 20 minutes, normally 12 for
 presentation/demonstration and 8 for questions; Option 1C's rebuild may use the
