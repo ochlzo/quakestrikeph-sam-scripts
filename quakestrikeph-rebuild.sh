@@ -3,7 +3,7 @@
 # Run all deployment scripts in order on a blank server and confirm the app works.
 # Authors: Armenta, Buergo, Candelaria, Pispis
 # Usage: sudo bash quakestrikeph-rebuild.sh --archive FILE --backup FILE [--config FILE] [--directory PATH]
-# AI assistance: Antigravity and ChatGPT helped simplify and review this script.
+# AI assistance: GPT 6.2 Sol (Codex) and Gemini 4 Neon (Antigravity) assisted with edge-case checks, refactoring, and review (see inline notes).
 
 app_directory="/srv/quakestrikeph"
 app_archive=""
@@ -95,7 +95,7 @@ done
 echo "Disk space before rebuild (/tmp, /srv, /var/lib):"
 df -h /tmp /srv /var/lib || fail "could not check disk space."
 
-# Verify both compressed archives are intact and contain expected structure.
+# AI-assisted: verify compressed archive structure with tar + extended regex grep and gzip -t.
 if ! tar -tzf "$app_archive" | grep -Eq '^(\./)?infrastructure/compose\.yml$' > /dev/null
 then
     fail "$app_archive is corrupted or missing infrastructure/compose.yml."
@@ -136,6 +136,7 @@ compose()
         -f "$app_directory/infrastructure/compose.checkoff.yml" "$@"
 }
 
+# AI-assisted: verify Backend and Bulletin HTTP health via inline Node fetch inside each container.
 echo "Step 6/6: verify Backend and Bulletin HTTP responses..."
 compose exec -T backend-api node -e "fetch('http://127.0.0.1:3000/healthz').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))" \
     || fail "Backend HTTP check failed."

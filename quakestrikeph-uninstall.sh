@@ -3,7 +3,7 @@
 # Remove only the QuakeStrikePH deployment, its database volumes, and its service account.
 # Authors: Armenta, Buergo, Candelaria, Pispis
 # Usage: sudo bash quakestrikeph-uninstall.sh [--directory /srv/quakestrikeph] [--confirm]
-# AI assistance: Antigravity and ChatGPT helped simplify and review this script.
+# AI assistance: GPT 6.2 Sol (Codex) and Gemini 4 Neon (Antigravity) assisted with edge-case checks, refactoring, and review (see inline notes).
 
 app_directory="/srv/quakestrikeph"
 project="quakestrikeph-sam"
@@ -74,7 +74,7 @@ esac
 
 docker info > /dev/null || fail "Docker is not responding; nothing was removed."
 
-# Find only resources belonging to the quakestrikeph-sam Compose project.
+# AI-assisted: scope Docker removal strictly to quakestrikeph-sam via Compose project label filters.
 containers=$(docker ps -aq --filter "label=com.docker.compose.project=$project") || fail "could not list containers."
 volumes=$(docker volume ls -q --filter "label=com.docker.compose.project=$project") || fail "could not list volumes."
 networks=$(docker network ls -q --filter "label=com.docker.compose.project=$project") || fail "could not list networks."

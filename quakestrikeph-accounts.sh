@@ -3,7 +3,7 @@
 # Create the dedicated service account and apply least-privilege permissions.
 # Authors: Armenta, Buergo, Candelaria, Pispis
 # Usage: sudo bash quakestrikeph-accounts.sh [--directory /srv/quakestrikeph]
-# AI assistance: Antigravity and ChatGPT helped simplify and review this script.
+# AI assistance: GPT 6.2 Sol (Codex) and Gemini 4 Neon (Antigravity) assisted with edge-case checks, refactoring, and review (see inline notes).
 # Note: UID/GID 10001 match the application container user in QuakeStrikePH.
 
 app_directory="/srv/quakestrikeph"
@@ -72,7 +72,7 @@ then
     groupadd --gid "$service_id" "$service_group" || fail "could not create group $service_group."
 fi
 
-# Create the locked service user if it does not already exist (no login shell, no sudo).
+# AI-assisted: locked service user flags (no home dir, nologin shell, disabled password).
 if ! getent passwd "$service_user" > /dev/null
 then
     useradd --uid "$service_id" --gid "$service_group" \
@@ -85,7 +85,7 @@ fi
 # Create the application directory if it does not exist yet.
 mkdir -p "$app_directory" || fail "could not create $app_directory."
 
-# Apply least-privilege permissions: root owns code, service group can read it.
+# AI-assisted: batch least-privilege permissions (root owns code, service group can read).
 chown -R root:"$service_group" "$app_directory" || fail "could not set ownership on $app_directory."
 find "$app_directory" -type d -exec chmod 750 {} + || fail "could not set directory permissions."
 find "$app_directory" -type f -exec chmod 640 {} + || fail "could not set file permissions."

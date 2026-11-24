@@ -1,0 +1,116 @@
+=== Sample Output: quakestrikeph-rebuild.sh ===
+Host OS: Debian GNU/Linux 13 (trixie)
+
+$ bash /root/toolkit/quakestrikeph-rebuild.sh --help
+Usage: sudo bash quakestrikeph-rebuild.sh --archive FILE --backup FILE [--config FILE] [--directory PATH]
+Run accounts, config, install, final permissions, database restore, and HTTP checks.
+
+Options:
+  --archive FILE    Prepared offline application archive (.tar.gz).
+  --backup FILE     Compressed PostgreSQL backup (.sql.gz) with test/earthquake data.
+  --config FILE     Private .env file to create or reuse. Default: /root/demo.env
+  --directory PATH  Application folder under /srv. Default: /srv/quakestrikeph
+  --help            Show this help message and exit.
+
+Example:
+  sudo bash quakestrikeph-rebuild.sh --archive /root/quakestrikeph-app.tar.gz --backup /root/quakestrikeph-db-backup.sql.gz
+[exit status: 0]
+
+$ sudo bash /root/toolkit/quakestrikeph-rebuild.sh --archive /root/quakestrikeph-app.tar.gz --backup /root/quakestrikeph-db-backup.sql.gz
+Disk space before rebuild (/tmp, /srv, /var/lib):
+Filesystem      Size  Used Avail Use% Mounted on
+tmpfs           3.8G   28K  3.8G   1% /tmp
+/dev/sdd       1007G  3.1G  953G   1% /
+/dev/sdd       1007G  3.1G  953G   1% /
+Step 1/6: prepare service account and directory...
+Accounts setup successful: quakestrikeph (10001:10001).
+Permissions applied to /srv/quakestrikeph.
+Step 2/6: prepare or reuse private configuration...
+Configuration ready: created /root/demo.env (mode 600).
+Step 3/6: install Docker offline and deploy QuakeStrikePH...
+Installing Docker from cached packages...
+Reading package lists...
+Building dependency tree...
+Reading state information...
+docker.io is already the newest version (26.1.5+dfsg1-9+deb13u1+b1).
+docker-cli is already the newest version (26.1.5+dfsg1-9+deb13u1+b1).
+docker-compose is already the newest version (2.26.1-4).
+0 upgraded, 0 newly installed, 0 to remove and 47 not upgraded.
+Synchronizing state of docker.service with SysV service script with /usr/lib/systemd/systemd-sysv-install.
+Executing: /usr/lib/systemd/systemd-sysv-install enable docker
+Loading the prepared Docker images...
+Loaded image: postgres:16.15-bookworm
+Loaded image: redis:7.4.11-bookworm
+Loaded image: quakestrike-backend:local
+Loaded image: quakestrike-bulletin:local
+Starting PostgreSQL and Redis...
+ Network quakestrikeph-sam_private-data  Creating
+ Network quakestrikeph-sam_private-data  Created
+ Network quakestrikeph-sam_backend-edge  Creating
+ Network quakestrikeph-sam_backend-edge  Created
+ Volume "quakestrikeph-sam_redis_data"  Creating
+ Volume "quakestrikeph-sam_redis_data"  Created
+ Volume "quakestrikeph-sam_postgres_data"  Creating
+ Volume "quakestrikeph-sam_postgres_data"  Created
+ Container quakestrikeph-sam-postgres-1  Creating
+ Container quakestrikeph-sam-redis-1  Creating
+ Container quakestrikeph-sam-redis-1  Created
+ Container quakestrikeph-sam-postgres-1  Created
+ Container quakestrikeph-sam-redis-1  Starting
+ Container quakestrikeph-sam-postgres-1  Starting
+ Container quakestrikeph-sam-postgres-1  Started
+ Container quakestrikeph-sam-redis-1  Started
+ Container quakestrikeph-sam-postgres-1  Waiting
+ Container quakestrikeph-sam-redis-1  Waiting
+ Container quakestrikeph-sam-redis-1  Healthy
+ Container quakestrikeph-sam-postgres-1  Healthy
+{"action":"provision-db-roles","status":"ready"}
+Installation successful. Application directory: /srv/quakestrikeph
+PostgreSQL and Redis are healthy. Run quakestrikeph-restore.sh next to load data and start the website.
+Step 4/6: apply final least-privilege permissions...
+Accounts setup successful: quakestrikeph (10001:10001).
+Permissions applied to /srv/quakestrikeph.
+Step 5/6: restore earthquake and forecast data...
+Restoring schema and earthquake/forecast data from /root/quakestrikeph-db-backup.sql.gz...
+{"action":"create-backend","status":"ready"}
+{"action":"grant-worker","status":"ready"}
+Starting Backend and Bulletin...
+ Container quakestrikeph-sam-redis-1  Running
+ Container quakestrikeph-sam-postgres-1  Running
+ Container quakestrikeph-sam-backend-api-1  Creating
+ Container quakestrikeph-sam-backend-api-1  Created
+ Container quakestrikeph-sam-bulletin-1  Creating
+ Container quakestrikeph-sam-bulletin-1  Created
+ Container quakestrikeph-sam-postgres-1  Waiting
+ Container quakestrikeph-sam-redis-1  Waiting
+ Container quakestrikeph-sam-postgres-1  Healthy
+ Container quakestrikeph-sam-redis-1  Healthy
+ Container quakestrikeph-sam-backend-api-1  Starting
+ Container quakestrikeph-sam-backend-api-1  Started
+ Container quakestrikeph-sam-backend-api-1  Waiting
+ Container quakestrikeph-sam-backend-api-1  Healthy
+ Container quakestrikeph-sam-bulletin-1  Starting
+ Container quakestrikeph-sam-bulletin-1  Started
+ Container quakestrikeph-sam-bulletin-1  Waiting
+ Container quakestrikeph-sam-postgres-1  Waiting
+ Container quakestrikeph-sam-redis-1  Waiting
+ Container quakestrikeph-sam-backend-api-1  Waiting
+ Container quakestrikeph-sam-redis-1  Healthy
+ Container quakestrikeph-sam-backend-api-1  Healthy
+ Container quakestrikeph-sam-postgres-1  Healthy
+ Container quakestrikeph-sam-bulletin-1  Healthy
+Database restore successful: 9618 earthquake records loaded.
+Open http://127.0.0.1:4321 to view the restored data.
+Step 6/6: verify Backend and Bulletin HTTP responses...
+Full rebuild successful: QuakeStrikePH is running with restored data.
+Open http://127.0.0.1:4321 to verify the website.
+[exit status: 0]
+
+$ docker ps --filter 'label=com.docker.compose.project=quakestrikeph-sam' --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
+NAMES                             STATUS                    PORTS
+quakestrikeph-sam-bulletin-1      Up 21 seconds (healthy)   127.0.0.1:4321->4321/tcp
+quakestrikeph-sam-backend-api-1   Up 37 seconds (healthy)   127.0.0.1:3000->3000/tcp
+quakestrikeph-sam-redis-1         Up 2 minutes (healthy)    
+quakestrikeph-sam-postgres-1      Up 2 minutes (healthy)    
+[exit status: 0]
+

@@ -1,0 +1,31 @@
+=== Sample Output: quakestrikeph-accounts.sh ===
+Host OS: Debian GNU/Linux 13 (trixie)
+
+$ bash /root/toolkit/quakestrikeph-accounts.sh --help
+Usage: sudo bash quakestrikeph-accounts.sh [--directory PATH]
+Create the locked quakestrikeph service account (UID/GID 10001)
+and apply least-privilege permissions to the application directory.
+
+Options:
+  --directory PATH  Application folder under /srv. Default: /srv/quakestrikeph
+  --help            Show this help message and exit.
+
+Example:
+  sudo bash quakestrikeph-accounts.sh --directory /srv/quakestrikeph
+[exit status: 0]
+
+$ sudo bash /root/toolkit/quakestrikeph-accounts.sh
+Accounts setup successful: quakestrikeph (10001:10001).
+Permissions applied to /srv/quakestrikeph.
+[exit status: 0]
+
+$ sudo bash /root/toolkit/quakestrikeph-accounts.sh  # Repeat run (idempotency check)
+Accounts setup successful: quakestrikeph (10001:10001).
+Permissions applied to /srv/quakestrikeph.
+[exit status: 0]
+
+$ id quakestrikeph && stat -c '%a %U:%G %n' /srv/quakestrikeph
+uid=10001(quakestrikeph) gid=10001(quakestrikeph) groups=10001(quakestrikeph)
+750 root:quakestrikeph /srv/quakestrikeph
+[exit status: 0]
+

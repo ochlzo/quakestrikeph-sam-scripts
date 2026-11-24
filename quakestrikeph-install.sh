@@ -3,7 +3,7 @@
 # Install Docker offline and deploy the QuakeStrikePH web application.
 # Authors: Armenta, Buergo, Candelaria, Pispis
 # Usage: sudo bash quakestrikeph-install.sh --archive FILE --config FILE [--directory PATH]
-# AI assistance: Antigravity and ChatGPT helped simplify and review this script.
+# AI assistance: GPT 6.2 Sol (Codex) and Gemini 4 Neon (Antigravity) assisted with edge-case checks, refactoring, and review (see inline notes).
 # Sources: QuakeStrikePH docs/operations/local-runtime.md; Docker Compose and apt-get manuals.
 
 app_directory="/srv/quakestrikeph"
@@ -127,7 +127,7 @@ do
     fi
 done
 
-# Extract and verify the offline archive in a temporary folder.
+# AI-assisted: extract archive into a temp folder with EXIT trap cleanup and safe tar flags.
 staging_directory=$(mktemp -d /tmp/quakestrikeph-install.XXXXXX) || fail "could not create a temporary directory."
 trap 'rm -rf -- "$staging_directory"' EXIT
 
@@ -205,7 +205,7 @@ compose up -d --no-build --pull never --wait --wait-timeout 120 postgres redis \
 compose exec -T postgres sh /opt/quakestrike/provision-roles.sh create \
     || fail "could not create base database roles."
 
-# Step 5: If the schema is already restored (repeat install), restart web services and verify HTTP.
+# AI-assisted: probe PostgreSQL schema state (to_regclass) and run container HTTP health checks.
 # On a fresh install, quakestrikeph-restore.sh loads the schema/data and starts Backend + Bulletin.
 schema_ready=$(compose exec -T postgres psql -U quakestrike -d quakestrike \
     -v ON_ERROR_STOP=1 -Atc "SELECT to_regclass('public.model_releases');") \

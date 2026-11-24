@@ -1,0 +1,77 @@
+=== Sample Output: quakestrikeph-restore.sh ===
+Host OS: Debian GNU/Linux 13 (trixie)
+
+$ bash /root/toolkit/quakestrikeph-restore.sh --help
+Usage: sudo bash quakestrikeph-restore.sh --backup FILE [--directory PATH]
+Verify a compressed .sql.gz backup and restore earthquake/forecast data into PostgreSQL.
+Safe to run twice: skips restore if earthquake records already exist.
+
+Options:
+  --backup FILE     Compressed SQL backup (.sql.gz) with test/earthquake data only.
+  --directory PATH  Application folder. Default: /srv/quakestrikeph
+  --help            Show this help message and exit.
+
+Example:
+  sudo bash quakestrikeph-restore.sh --backup /root/quakestrikeph-db-backup.sql.gz
+[exit status: 0]
+
+$ sudo bash /root/toolkit/quakestrikeph-restore.sh --backup /root/quakestrikeph-db-backup.sql.gz
+Restoring schema and earthquake/forecast data from /root/quakestrikeph-db-backup.sql.gz...
+{"action":"create-backend","status":"ready"}
+{"action":"grant-worker","status":"ready"}
+Starting Backend and Bulletin...
+ Container quakestrikeph-sam-redis-1  Running
+ Container quakestrikeph-sam-postgres-1  Running
+ Container quakestrikeph-sam-backend-api-1  Creating
+ Container quakestrikeph-sam-backend-api-1  Created
+ Container quakestrikeph-sam-bulletin-1  Creating
+ Container quakestrikeph-sam-bulletin-1  Created
+ Container quakestrikeph-sam-postgres-1  Waiting
+ Container quakestrikeph-sam-redis-1  Waiting
+ Container quakestrikeph-sam-postgres-1  Healthy
+ Container quakestrikeph-sam-redis-1  Healthy
+ Container quakestrikeph-sam-backend-api-1  Starting
+ Container quakestrikeph-sam-backend-api-1  Started
+ Container quakestrikeph-sam-backend-api-1  Waiting
+ Container quakestrikeph-sam-backend-api-1  Healthy
+ Container quakestrikeph-sam-bulletin-1  Starting
+ Container quakestrikeph-sam-bulletin-1  Started
+ Container quakestrikeph-sam-bulletin-1  Waiting
+ Container quakestrikeph-sam-postgres-1  Waiting
+ Container quakestrikeph-sam-redis-1  Waiting
+ Container quakestrikeph-sam-backend-api-1  Waiting
+ Container quakestrikeph-sam-redis-1  Healthy
+ Container quakestrikeph-sam-backend-api-1  Healthy
+ Container quakestrikeph-sam-postgres-1  Healthy
+ Container quakestrikeph-sam-bulletin-1  Healthy
+Database restore successful: 9618 earthquake records loaded.
+Open http://127.0.0.1:4321 to view the restored data.
+[exit status: 0]
+
+$ sudo bash /root/toolkit/quakestrikeph-restore.sh --backup /root/quakestrikeph-db-backup.sql.gz  # Repeat run
+Database already contains 9618 earthquake records; keeping existing data.
+{"action":"create-backend","status":"ready"}
+{"action":"grant-worker","status":"ready"}
+Starting Backend and Bulletin...
+ Container quakestrikeph-sam-redis-1  Running
+ Container quakestrikeph-sam-postgres-1  Running
+ Container quakestrikeph-sam-backend-api-1  Running
+ Container quakestrikeph-sam-bulletin-1  Running
+ Container quakestrikeph-sam-postgres-1  Waiting
+ Container quakestrikeph-sam-redis-1  Waiting
+ Container quakestrikeph-sam-postgres-1  Healthy
+ Container quakestrikeph-sam-redis-1  Healthy
+ Container quakestrikeph-sam-backend-api-1  Waiting
+ Container quakestrikeph-sam-backend-api-1  Healthy
+ Container quakestrikeph-sam-backend-api-1  Waiting
+ Container quakestrikeph-sam-bulletin-1  Waiting
+ Container quakestrikeph-sam-postgres-1  Waiting
+ Container quakestrikeph-sam-redis-1  Waiting
+ Container quakestrikeph-sam-bulletin-1  Healthy
+ Container quakestrikeph-sam-redis-1  Healthy
+ Container quakestrikeph-sam-postgres-1  Healthy
+ Container quakestrikeph-sam-backend-api-1  Healthy
+Database restore successful: 9618 earthquake records loaded.
+Open http://127.0.0.1:4321 to view the restored data.
+[exit status: 0]
+

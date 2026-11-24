@@ -1,0 +1,28 @@
+=== Sample Output: quakestrikeph-config.sh ===
+Host OS: Debian GNU/Linux 13 (trixie)
+
+$ bash /root/toolkit/quakestrikeph-config.sh --help
+Usage: sudo bash quakestrikeph-config.sh [--output FILE] [--directory PATH]
+Generate a private root-only .env file for QuakeStrikePH, or reuse an existing one.
+
+Options:
+  --output FILE     Private config file path. Default: /root/demo.env
+  --directory PATH  Application folder. Default: /srv/quakestrikeph
+  --help            Show this help message and exit.
+
+Example:
+  sudo bash quakestrikeph-config.sh --output /root/demo.env
+[exit status: 0]
+
+$ sudo bash /root/toolkit/quakestrikeph-config.sh --output /root/demo.env
+Configuration ready: created /root/demo.env (mode 600).
+[exit status: 0]
+
+$ stat -c '%a %U:%G %n' /root/demo.env
+600 root:root /root/demo.env
+[exit status: 0]
+
+$ sudo bash /root/toolkit/quakestrikeph-config.sh --output /root/demo.env  # Repeat run
+Configuration ready: existing /root/demo.env kept unchanged.
+[exit status: 0]
+

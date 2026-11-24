@@ -3,7 +3,7 @@
 # Generate or reuse the private .env configuration for the QuakeStrikePH demo.
 # Authors: Armenta, Buergo, Candelaria, Pispis
 # Usage: sudo bash quakestrikeph-config.sh [--output /root/demo.env] [--directory /srv/quakestrikeph]
-# AI assistance: Antigravity and ChatGPT helped simplify and review this script.
+# AI assistance: GPT 6.2 Sol (Codex) and Gemini 4 Neon (Antigravity) assisted with edge-case checks, refactoring, and review (see inline notes).
 # Settings adapted from QuakeStrikePH .env.example and docs/operations/local-runtime.md.
 
 output_file="/root/demo.env"
@@ -65,7 +65,7 @@ done
 
 installed_config="$app_directory/.env"
 
-# Case 1: The output file already exists. Keep it unchanged (safe to run twice).
+# AI-assisted: validate mode (600/400) and byte-match against installed .env for repeat-safety.
 if [ -f "$output_file" ]
 then
     file_mode=$(stat -c '%a' "$output_file")
@@ -87,7 +87,7 @@ then
     fail "parent directory does not exist: $output_parent"
 fi
 
-# Restrict new files to owner-only permissions (600) while creating them.
+# AI-assisted: set umask 077 before creating files so secrets are never world-readable.
 umask 077
 
 # Case 2: Output is missing, but the app already has an installed .env. Reuse it.

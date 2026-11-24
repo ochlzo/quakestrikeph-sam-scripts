@@ -188,7 +188,7 @@ man ./man/quakestrikeph-toolkit.8
 
 ## Academic integrity and safe practice
 
-- AI assistance (Antigravity and ChatGPT) is disclosed in each script header and in the manual page.
+- AI assistance (GPT 6.2 Sol in Codex and Gemini 4 Neon in Antigravity) is disclosed in each script header, inline on complex blocks, and in the manual page.
 - Every group member must be able to explain every line of all six scripts during individual Q&A.
 - Only public/sanitized earthquake and forecast data is used for the demo — never real user accounts, passwords, or private keys.
 - Keep `.env` files, archives, backups, and WSL `.tar` snapshots outside Git.

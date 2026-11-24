@@ -1,0 +1,59 @@
+=== Sample Output: quakestrikeph-install.sh ===
+Host OS: Debian GNU/Linux 13 (trixie)
+
+$ bash /root/toolkit/quakestrikeph-install.sh --help
+Usage: sudo bash quakestrikeph-install.sh --archive FILE --config FILE [--directory PATH]
+Install Docker from cached packages and deploy QuakeStrikePH offline.
+
+Options:
+  --archive FILE    Prepared offline application archive (.tar.gz).
+  --config FILE     Private .env file with permissions 600 or 400.
+  --directory PATH  Application folder under /srv. Default: /srv/quakestrikeph
+  --help            Show this help message and exit.
+
+Example:
+  sudo bash quakestrikeph-install.sh --archive /root/quakestrikeph-app.tar.gz --config /root/demo.env
+[exit status: 0]
+
+$ sudo bash /root/toolkit/quakestrikeph-install.sh --archive /root/quakestrikeph-app.tar.gz --config /root/demo.env
+Installing Docker from cached packages...
+Reading package lists...
+Building dependency tree...
+Reading state information...
+docker.io is already the newest version (26.1.5+dfsg1-9+deb13u1+b1).
+docker-cli is already the newest version (26.1.5+dfsg1-9+deb13u1+b1).
+docker-compose is already the newest version (2.26.1-4).
+0 upgraded, 0 newly installed, 0 to remove and 47 not upgraded.
+Synchronizing state of docker.service with SysV service script with /usr/lib/systemd/systemd-sysv-install.
+Executing: /usr/lib/systemd/systemd-sysv-install enable docker
+Loading the prepared Docker images...
+Loaded image: postgres:16.15-bookworm
+Loaded image: redis:7.4.11-bookworm
+Loaded image: quakestrike-backend:local
+Loaded image: quakestrike-bulletin:local
+Starting PostgreSQL and Redis...
+ Network quakestrikeph-sam_backend-edge  Creating
+ Network quakestrikeph-sam_backend-edge  Created
+ Network quakestrikeph-sam_private-data  Creating
+ Network quakestrikeph-sam_private-data  Created
+ Volume "quakestrikeph-sam_postgres_data"  Creating
+ Volume "quakestrikeph-sam_postgres_data"  Created
+ Volume "quakestrikeph-sam_redis_data"  Creating
+ Volume "quakestrikeph-sam_redis_data"  Created
+ Container quakestrikeph-sam-postgres-1  Creating
+ Container quakestrikeph-sam-redis-1  Creating
+ Container quakestrikeph-sam-redis-1  Created
+ Container quakestrikeph-sam-postgres-1  Created
+ Container quakestrikeph-sam-redis-1  Starting
+ Container quakestrikeph-sam-postgres-1  Starting
+ Container quakestrikeph-sam-redis-1  Started
+ Container quakestrikeph-sam-postgres-1  Started
+ Container quakestrikeph-sam-redis-1  Waiting
+ Container quakestrikeph-sam-postgres-1  Waiting
+ Container quakestrikeph-sam-redis-1  Healthy
+ Container quakestrikeph-sam-postgres-1  Healthy
+{"action":"provision-db-roles","status":"ready"}
+Installation successful. Application directory: /srv/quakestrikeph
+PostgreSQL and Redis are healthy. Run quakestrikeph-restore.sh next to load data and start the website.
+[exit status: 0]
+

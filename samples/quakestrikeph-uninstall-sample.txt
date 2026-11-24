@@ -1,0 +1,59 @@
+=== Sample Output: quakestrikeph-uninstall.sh ===
+Host OS: Debian GNU/Linux 13 (trixie)
+
+$ bash /root/toolkit/quakestrikeph-uninstall.sh --help
+Usage: sudo bash quakestrikeph-uninstall.sh [--directory PATH] [--confirm]
+Preview removal of the QuakeStrikePH deployment by default.
+Add --confirm to permanently delete its containers, volumes, networks,
+application folder, and service account without touching Docker or other apps.
+
+Options:
+  --directory PATH  Application folder under /srv. Default: /srv/quakestrikeph
+  --confirm         Perform deletion instead of previewing.
+  --help            Show this help message and exit.
+
+Example (preview only):
+  sudo bash quakestrikeph-uninstall.sh --directory /srv/quakestrikeph
+[exit status: 0]
+
+$ sudo bash /root/toolkit/quakestrikeph-uninstall.sh
+Removal target: /srv/quakestrikeph (Compose project: quakestrikeph-sam)
+Containers: 40e2af0fb25a
+3485c31a5461
+067cba78dbc0
+9e429e8c057a
+Volumes:    quakestrikeph-sam_postgres_data
+quakestrikeph-sam_redis_data
+Networks:   1e0a821d0e57
+18cd61bf40f2
+Account:    quakestrikeph (if present)
+Preview only: nothing removed. Add --confirm to delete.
+[exit status: 0]
+
+$ sudo bash /root/toolkit/quakestrikeph-uninstall.sh --confirm
+Removal target: /srv/quakestrikeph (Compose project: quakestrikeph-sam)
+Containers: 40e2af0fb25a
+3485c31a5461
+067cba78dbc0
+9e429e8c057a
+Volumes:    quakestrikeph-sam_postgres_data
+quakestrikeph-sam_redis_data
+Networks:   1e0a821d0e57
+18cd61bf40f2
+Account:    quakestrikeph (if present)
+40e2af0fb25a
+40e2af0fb25a
+3485c31a5461
+3485c31a5461
+067cba78dbc0
+067cba78dbc0
+9e429e8c057a
+9e429e8c057a
+quakestrikeph-sam_postgres_data
+quakestrikeph-sam_redis_data
+1e0a821d0e57
+18cd61bf40f2
+Uninstall successful: QuakeStrikePH deployment removed.
+Docker, cached images, backups, and external .env files were kept.
+[exit status: 0]
+

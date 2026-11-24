@@ -6,7 +6,7 @@
 #
 # Authors: Armenta, Buergo, Candelaria, Pispis
 # Usage: bash tools/prepare-demo-artifacts.sh [--app-repo PATH] [--db-only] [--output-dir PATH] [--db-url URL | --compose-project NAME]
-# AI assistance: Antigravity helped write this preparation helper.
+# AI assistance: GPT 6.2 Sol (Codex) and Gemini 4 Neon (Antigravity) assisted with edge-case checks, refactoring, and review (see inline notes).
 # Note: This is a local preparation tool, not one of the six submitted Option 1C scripts.
 
 app_repo=""
@@ -119,6 +119,7 @@ then
     bundle_dir=$(mktemp -d) || fail "could not create temporary bundle directory."
     trap 'rm -rf -- "$bundle_dir"' EXIT
 
+    # AI-assisted: export clean Git tracked files and save Docker images into an offline archive.
     echo "Exporting tracked source files..."
     git -C "$app_repo" archive --format=tar HEAD | tar -xf - -C "$bundle_dir" || fail "could not export Git archive."
 
@@ -136,7 +137,7 @@ then
     tar -tzf "$app_archive" > /dev/null || fail "created archive failed integrity check."
 fi
 
-# 2. Export full schema + earthquake/model/forecast data (excluding user/account/alert rows)
+# AI-assisted: pg_dump --exclude-table-data wildcards to keep schema while stripping user/account/alert/session rows.
 dump_flags=(
     --inserts
     --on-conflict-do-nothing

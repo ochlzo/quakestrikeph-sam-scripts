@@ -1,6 +1,6 @@
 .\" Adapted from Appendix C of the IT 123 Final Project Guide v01.
-.\" AI assistance: Antigravity and ChatGPT helped draft and review this manual page.
-.TH QUAKESTRIKEPH-TOOLKIT 8 "22 November 2026" "QuakeStrikePH" "System Administration"
+.\" AI assistance: GPT 6.2 Sol (Codex) and Gemini 4 Neon (Antigravity) assisted with formatting and review of this manual page.
+.TH QUAKESTRIKEPH-TOOLKIT 8 "25 November 2026" "BSIT 4B - Group 10 (QuakeStrikePH)" "System Administration"
 .SH NAME
 quakestrikeph-toolkit \- provision, restore, remove, and rebuild the QuakeStrikePH demo
 .SH SYNOPSIS
@@ -28,8 +28,8 @@ without root privileges.
 .SH DESCRIPTION
 These six Bash scripts implement IT 123 Option 1C (Provision and Rebuild) for the
 QuakeStrikePH web application (Bulletin, Backend, PostgreSQL, and Redis).
-They target Ubuntu 24.04 LTS and Debian 13 with systemd and support offline
-deployment using cached APT packages and two prepared archives:
+They target Debian 13 (tested on Debian GNU/Linux 13.6 trixie on WSL 2 with systemd)
+and Ubuntu 24.04 LTS, supporting offline deployment using cached APT packages and two prepared archives:
 .B quakestrikeph-app.tar.gz
 (application source and exported Docker images for Postgres, Redis, Backend, and Bulletin) and
 .B quakestrikeph-db-backup.sql.gz
@@ -119,6 +119,12 @@ Installed root-only configuration file (mode 600).
 .B /srv/quakestrikeph/infrastructure/compose.checkoff.yml
 Compose override generated during installation.
 .TP
+.B /root/quakestrikeph-app.tar.gz
+Prepared offline application archive containing tracked source files and exported Docker images.
+.TP
+.B /root/quakestrikeph-db-backup.sql.gz
+Compressed PostgreSQL backup containing full schema plus public/test earthquake and forecast data only.
+.TP
 .B /var/cache/apt/archives/
 Cached APT packages used for offline Docker installation.
 .SH EXIT STATUS
@@ -131,7 +137,7 @@ A validation check or deployment step failed. Check the error message on stderr.
 .SH AUTHORS
 Armenta, Buergo, Candelaria, and Pispis.
 .PP
-AI assistance: Antigravity and ChatGPT helped simplify and verify these scripts and manual page.
+AI assistance: GPT 6.2 Sol (Codex) and Gemini 4 Neon (Antigravity) assisted with edge-case checks, refactoring, and review (see inline script notes).
 .SH SEE ALSO
 .BR bash (1),
 .BR man (1),

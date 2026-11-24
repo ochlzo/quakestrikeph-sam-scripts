@@ -3,7 +3,7 @@
 # Restore sanitized earthquake and forecast data from a compressed PostgreSQL backup.
 # Authors: Armenta, Buergo, Candelaria, Pispis
 # Usage: sudo bash quakestrikeph-restore.sh --backup FILE [--directory /srv/quakestrikeph]
-# AI assistance: Antigravity helped write and review this script.
+# AI assistance: GPT 6.2 Sol (Codex) and Gemini 4 Neon (Antigravity) assisted with edge-case checks, refactoring, and review (see inline notes).
 
 app_directory="/srv/quakestrikeph"
 backup_file=""
@@ -94,7 +94,7 @@ compose()
         -f "$app_directory/infrastructure/compose.checkoff.yml" "$@"
 }
 
-# Check whether the schema and earthquake records already exist (safe to run twice).
+# AI-assisted: probe schema/row count for repeat-safety and stream gunzip output into psql.
 table_exists=$(compose exec -T postgres psql -U quakestrike -d quakestrike \
     -v ON_ERROR_STOP=1 -Atc "SELECT to_regclass('public.earthquake_event_revisions');") \
     || fail "could not query PostgreSQL. Make sure the database is running."
