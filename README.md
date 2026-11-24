@@ -56,6 +56,25 @@ This produces two files to copy onto the blank server (for example into `/root/`
 
 Keep credentials (`.env`), archives, and backups outside this Git repository.
 
+### 3. Copy the scripts and archives into a WSL 2 clean server
+If your WSL distribution has `[automount] enabled=false` and a non-root default user (for example `sam`), copy the files from **Windows PowerShell** into `/home/sam/staging` first, then move them into `/root` as `root`:
+
+```powershell
+# 1. Create a staging folder in the clean WSL distro (replace distro/user names if needed)
+wsl.exe -d QuakeStrikePH-CleanTest -u sam -- mkdir -p /home/sam/staging/toolkit
+
+# 2. Copy the 6 scripts and both archives from Windows
+Copy-Item ".\quakestrikeph-*.sh" "\\wsl.localhost\QuakeStrikePH-CleanTest\home\sam\staging\toolkit\"
+Copy-Item "..\backups\quakestrikeph-app.tar.gz" "\\wsl.localhost\QuakeStrikePH-CleanTest\home\sam\staging\"
+Copy-Item "..\backups\quakestrikeph-db-backup.sql.gz" "\\wsl.localhost\QuakeStrikePH-CleanTest\home\sam\staging\"
+
+# 3. Move everything into /root and make the scripts executable
+wsl.exe -d QuakeStrikePH-CleanTest -u root -- bash -c "mkdir -p /root/toolkit && mv /home/sam/staging/toolkit/*.sh /root/toolkit/ && mv /home/sam/staging/quakestrikeph-*.gz /root/ && rmdir /home/sam/staging/toolkit /home/sam/staging && chown -R root:root /root/toolkit /root/quakestrikeph-*.gz && chmod +x /root/toolkit/*.sh"
+
+# 4. Verify all 6 scripts and both archives are in place
+wsl.exe -d QuakeStrikePH-CleanTest -u root -- bash -c "ls -lh /root/quakestrikeph-*.gz /root/toolkit/"
+```
+
 ---
 
 ## Running the toolkit
