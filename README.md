@@ -53,14 +53,15 @@ wsl.exe --import QuakeStrikePH-CleanTest "C:\WSL\QuakeStrikePH-CleanTest" "C:\pa
    wsl.exe --terminate QuakeStrikePH-CleanTest
    ```
 
-4. While online, pre-download Docker packages **without installing them**:
+4. While online, pre-download Docker packages **without installing them** *(minimal Debian WSL images omit `man`, so install `man-db` first if using Debian; Ubuntu 24.04 already includes it)*:
    ```bash
    sudo apt-get update
 
    # Ubuntu 24.04 LTS:
    sudo apt-get install --download-only docker.io docker-compose-v2
 
-   # Debian 13:
+   # Debian 13 (install base man viewer first, then cache Docker packages):
+   sudo apt-get install -y man-db
    sudo apt-get install --download-only docker.io docker-cli docker-compose
    ```
 
@@ -94,24 +95,30 @@ bash tools/prepare-demo-artifacts.sh \
 
 ---
 
-## Step 3: Copy the scripts and archives into the clean server
+## Step 3: Copy the scripts, manual page, and archives into the clean server
 
 From **Windows PowerShell** inside this repository folder (works even when WSL has `[automount] enabled=false` and a non-root default user like `sam`):
 
 ```powershell
 # 1. Create a staging folder in the clean WSL distro (replace user/distro names if different)
-wsl.exe -d QuakeStrikePH-CleanTest -u sam -- mkdir -p /home/sam/staging/toolkit
+wsl.exe -d QuakeStrikePH-CleanTest -u sam -- mkdir -p /home/sam/staging/toolkit/man
 
-# 2. Copy the 6 scripts and both archives from Windows
+# 2. Copy the 6 scripts, manual page, and both archives from Windows
 Copy-Item ".\quakestrikeph-*.sh" "\\wsl.localhost\QuakeStrikePH-CleanTest\home\sam\staging\toolkit\"
+Copy-Item ".\man\quakestrikeph-toolkit.8" "\\wsl.localhost\QuakeStrikePH-CleanTest\home\sam\staging\toolkit\man\"
 Copy-Item "..\backups\quakestrikeph-app.tar.gz" "\\wsl.localhost\QuakeStrikePH-CleanTest\home\sam\staging\"
 Copy-Item "..\backups\quakestrikeph-db-backup.sql.gz" "\\wsl.localhost\QuakeStrikePH-CleanTest\home\sam\staging\"
 
 # 3. Move everything into /root and make the scripts executable
-wsl.exe -d QuakeStrikePH-CleanTest -u root -- bash -c "mkdir -p /root/toolkit && mv /home/sam/staging/toolkit/*.sh /root/toolkit/ && mv /home/sam/staging/quakestrikeph-*.gz /root/ && rmdir /home/sam/staging/toolkit /home/sam/staging && chown -R root:root /root/toolkit /root/quakestrikeph-*.gz && chmod +x /root/toolkit/*.sh"
+wsl.exe -d QuakeStrikePH-CleanTest -u root -- bash -c "mkdir -p /root/toolkit/man && mv /home/sam/staging/toolkit/*.sh /root/toolkit/ && mv /home/sam/staging/toolkit/man/quakestrikeph-toolkit.8 /root/toolkit/man/ && mv /home/sam/staging/quakestrikeph-*.gz /root/ && rmdir /home/sam/staging/toolkit/man /home/sam/staging/toolkit /home/sam/staging && chown -R root:root /root/toolkit /root/quakestrikeph-*.gz && chmod +x /root/toolkit/*.sh"
 
-# 4. Verify all 6 scripts and both archives are in place
-wsl.exe -d QuakeStrikePH-CleanTest -u root -- bash -c "ls -lh /root/quakestrikeph-*.gz /root/toolkit/"
+# 4. Verify all 6 scripts, the manual page, and both archives are in place
+wsl.exe -d QuakeStrikePH-CleanTest -u root -- bash -c "ls -lh /root/quakestrikeph-*.gz /root/toolkit/ /root/toolkit/man/"
+```
+
+To view the manual page inside the server:
+```bash
+cd /root/toolkit/man && man ./quakestrikeph-toolkit.8
 ```
 
 ---
